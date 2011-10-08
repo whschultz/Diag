@@ -354,15 +354,27 @@ END {
 }
 BEGIN {
 # this BEGIN statement ties in with the above shutdown codes regex
+
 	show_summary=0;
 
-	command_to_get_model_id="system_profiler SPHardwareDataType | awk '/Model Identifier|Machine Model/ { print $3 }'"
-	command_to_get_model_id | getline MODEL_IDENTIFIER
-	#MODEL_IDENTIFIER=$0
-	close(command_to_get_model_id)
-	
-	#MODEL_IDENTIFIER=system("system_profiler SPHardwareDataType | awk '/Model Identifier/ { print $3 }'");
-	print "This machine's model identifier:   " MODEL_IDENTIFIER
+	if ( MODEL_IDENTIFIER == 0 )
+	{
+	# Note that the default behavior is to get the Model Indentifier from the machine checking
+	# the log files.  If you're checking the log files of a completely different machine, you
+	# should find that machine's model identifier and pass it into this script using awk's "-v"
+	# argument.  The "if" statement is here such that the model identifier is only looked up
+	# if it isn't provided.
+
+		command_to_get_model_id="system_profiler SPHardwareDataType | awk '/Model Identifier|Machine Model/ { print $3 }'"
+		command_to_get_model_id | getline MODEL_IDENTIFIER
+		#MODEL_IDENTIFIER=$0
+		close(command_to_get_model_id)
+		print "This machine's model identifier:   " MODEL_IDENTIFIER
+	}
+	else
+	{
+		print "Using model identifier:   " MODEL_IDENTIFIER
+	}
 	
 	
 	if ( MODEL_IDENTIFIER ~ /iMac7,1/ )
