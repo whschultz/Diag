@@ -11,15 +11,15 @@
 	<key>BundledFiles</key>
 	<array>
 		<string>/opt/local/sbin/smartctl</string>
-		<string>/Users/Admin/Dropbox/Diagnostics/diag</string>
-		<string>/Users/Admin/Dropbox/Diagnostics/platypus.command</string>
+		<string>/Users/whschultz/Documents/Diag/diag</string>
+		<string>/Users/whschultz/Documents/Diag/platypus.command</string>
 	</array>
 	<key>Creator</key>
 	<string>Platypus-4.4</string>
 	<key>CustomIconPath</key>
 	<string>/Applications/MacPorts/Platypus.app/Contents/Resources/PlatypusDefault.icns</string>
 	<key>Destination</key>
-	<string>/Users/Admin/Desktop/MyApp.app</string>
+	<string>/Users/whschultz/Desktop/MyApp.app</string>
 	<key>DestinationOverride</key>
 	<false/>
 	<key>DevelopmentVersion</key>
@@ -38,11 +38,11 @@
 	<key>HasCustomIcon</key>
 	<true/>
 	<key>Identifier</key>
-	<string>org.whschultz.diag_dev</string>
+	<string>org.whsoft.diag</string>
 	<key>Interpreter</key>
 	<string>/bin/sh</string>
 	<key>Name</key>
-	<string>diag_dev</string>
+	<string>diag</string>
 	<key>NibPath</key>
 	<string>/usr/local/share/platypus/MainMenu.nib</string>
 	<key>OptimizeApplication</key>
@@ -56,7 +56,7 @@
 	<key>Role</key>
 	<string>Viewer</string>
 	<key>ScriptPath</key>
-	<string>/Users/Admin/Dropbox/Diagnostics/platypus_script.sh</string>
+	<string>/Users/whschultz/Documents/Diag/platypus_script.sh</string>
 	<key>Secure</key>
 	<false/>
 	<key>ShowInDock</key>
