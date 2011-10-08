@@ -64,6 +64,12 @@ BEGIN {
 		
 	for( drive in list_of_drives )
 	{
+	# These drives are considered "Main IO".  All others are considered
+	# secondary IO or disk images.  In some cases, booting from an external USB device
+	# will cause the boot device to snag disk0, but this is rare and likely only happens
+	# when the internal drive takes a long time to spin up and be ready.  This is part of why
+	# this is being printed.  If disk0 isn't in this list, the interpretations of the log
+	# files may be inaccurate.
 		print "Found physically connected drive:  " drive
 		if ( physically_connected_drives_regexp == 0 )
 			physically_connected_drives_regexp=drive;
@@ -255,6 +261,8 @@ END {
 }
 
 /ct_loader|cttoolbar|CTLoad|Incompatible applications.*app=.*targetApp=/ {
+	# By default, the messages in the logs are not shown for this error.  It's really only relevant
+	# that it's installed and should most likey be uninstalled.
 	if ( dont_ignore_cttoolbar == 1 )
 		handle_error_row($0,"CTToolbar is installed and producing errors",YELLOW);
 	else
@@ -308,6 +316,7 @@ END {
 #
 
 /AppleSMU -- shutdown cause/ {
+	# PowerPC
 	if ( print_all_errors == 1 || print_all_shutdown_causes == 1 )
 	{
 		if ( $11 >= 0 && print_all_shutdown_causes == 1 ) 
@@ -327,6 +336,7 @@ END {
 		min = $11;
 }
 /Previous (Shutdown|Sleep) Cause/ {
+	# Intel
 	if ( ! ( $9 in list_of_explanations ) )
 	{
 		list_of_explanations[$9]=BOLD RED"(abnormal, not found in documentation)"RESET;
@@ -374,10 +384,12 @@ BEGIN {
 
 	if ( MODEL_IDENTIFIER ~ /MacBookPro5,5/ )
 	{
+		# This is identical to the below description, but it's been explicitly verified on this model.
 		list_of_explanations[3]="(normal restart or power button forced shutdown.  Expected normal behavior)";
 	}
 	else if ( MODEL_IDENTIFIER ~ /MacBookPro[0-9]+,[0-9]+/ )
 	{
+		# Suspect the same is true for all MBPs until we have evidence to the contrary.
 		list_of_explanations[3]="(normal restart or power button forced shutdown.  Expected normal behavior)";
 	}
 	else
@@ -388,6 +400,8 @@ BEGIN {
 
 	if ( MODEL_IDENTIFIER ~ /MacBookPro[0-9]+,[0-9]+/ )
 	{
+		# The Apple documentation has completely different descriptions for this code
+		# depending on the machine that produces it.
 		list_of_explanations[-86]=RED"(Proximity temperature exceeds limits)"RESET;
 	}
 	else if ( MODEL_IDENTIFIER ~ /MacBookAir[0-9]+,[0-9]+/ )
@@ -438,6 +452,8 @@ BEGIN {
 	list_of_explanations[-100]=RED"(power supply temp exceeds limits.  Check fans and air flow)"RESET;
 	list_of_explanations[-101]=RED"(LCD overtemp.  Check LCD panel and environment temperature)"RESET;
 	
+	
+	# This overrides anything written above for the following machines.
 	if ( MODEL_IDENTIFIER ~ /PowerMac[0-9]+,[0-9]+/ )
 	{
 		list_of_explanations[1]="(normal shutdown.  Expected normal behavior)";
