@@ -555,6 +555,7 @@ do_check_offline_cache () {
 
 			if [ -d "$USER"/Library/Mail/V2 ]
 			then
+				# 10.7 Lion
 				MAIL_SUBDIR="Library/Mail/V2"
 			fi
 
@@ -629,6 +630,12 @@ run_all_SMART_tests () {
 	FOUND_HARD_DRIVE_ERRORS=0
 	
 	# Show health of remaining drives only if they exist, are supported, and are bad.
+	
+	# And yes, this implementation does mean that if there are more than ten drives/images attached
+	# that only the first ten will be checked.  This could be rewritten/refactored to take
+	# take advantage of the new list_internal_drives function, but the existing method asks the drive
+	# itself whether it supports SMART, whereas using list_internal_drives makes assumptions about
+	# which drives will support SMART.
 	for disk in /dev/disk[0-9]
 	do
 		if [ -e $disk ]

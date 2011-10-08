@@ -183,6 +183,8 @@ BEGIN {
 }
 
 BEGIN {
+	# Not an official list.  Tweaking this as I come across the errors.  Descriptions are determined
+	# by author from context clues in the logs.
 	list_of_time_machine_explanations[18]=RED"Couldn't find backup (e.g. backup found but doesn't match this computer, or couldn't connect to server)"RESET;
 	list_of_time_machine_explanations[19]=YELLOW"Error while resolving alias to backup target"RESET;
 	list_of_time_machine_explanations[31]=PURPLE"Failed to mount disk image (e.g. disk image may already be mounted.  restart base station.)"RESET;
@@ -377,6 +379,12 @@ BEGIN {
 	}
 	
 	
+	# Many of these descriptions come directly from Apple's service manuals (which have limited 
+	# information and are therefore rather ambiguous as to what's really going on.  e.g. -70).
+	# Others come from direct observation and are known.  Therefore, don't consider this a master
+	# list.  If a specific model is listed, consider the explanation verified.
+	
+	
 	if ( MODEL_IDENTIFIER ~ /iMac7,1/ )
 	{
 		list_of_explanations[0]="(power disconnected or booted from different device.  Expected normal behavior)";
@@ -468,6 +476,10 @@ BEGIN {
 	# This overrides anything written above for the following machines.
 	if ( MODEL_IDENTIFIER ~ /PowerMac[0-9]+,[0-9]+/ )
 	{
+	# Verified on iMac G5 (17-inch).  Need to look up the model ID.
+	# On the test machine, there were also -122 codes, and it had a semi-dead power supply,
+	# so it's possible the -122 means the power supply stopped putting out correct voltages,
+	# but this is not known.  (Trickle voltage was present, but machine failed to power on.)
 		list_of_explanations[1]="(normal shutdown.  Expected normal behavior)";
 		list_of_explanations[2]="(normal restart.  Expected normal behavior)";
 		list_of_explanations[3]="(power button forced shutdown.  Expected normal behavior)";
