@@ -787,6 +787,59 @@ run_software_checks_on_boot_volume () {
 }
 
 
+check_power_cord_wattage () {
+	MODEL_IDENTIFIER="`system_profiler SPHardwareDataType | awk '/Model Identifier/ { print $3 }'`"
+	WATTAGE="`pmset -g ac | awk '/Wattage/ { print $3 }'`"
+
+	if [ "$WATTAGE" = "45W" ]
+	then
+		# Only a MacBook Air will work correctly on this
+		if [ -n "`echo $MODEL_IDENTIFIER | egrep 'MacBookAir'`" ]
+		then
+			echo "Detected $WATTAGE power cord, which is fine on this machine."
+		else
+			echo "This is only $WATTAGE power cord, which is not enough for this machine:  $MODEL_IDENTIFIER"
+		fi
+	else
+		if [ "$WATTAGE" = "60W" ]
+		then 
+			# Any MacBook or MacBookAir will work fine.
+			# Most 15" MBPs will not.  13" MBPs will.
+			if [ -n "`echo $MODEL_IDENTIFIER | egrep 'MacBook(Air|[0-9])'`" ]
+			then
+				echo "Detected $WATTAGE power cord, which is fine on this machine."
+			else
+				if [ -n "`echo $MODEL_IDENTIFIER | egrep 'MacBookPro(5,[45]|[78],1)'`" ]
+				then
+					# MacBookPro5,4  MacBookPro5,5  MacBookPro7,1  MacBookPro8,1
+					echo "Detected $WATTAGE power cord, which is fine on this machine."				
+				else
+					echo "This is only $WATTAGE power cord, which is not enough for this machine:  $MODEL_IDENTIFIER"
+				fi
+			fi
+		else
+			if [ "$WATTAGE" = "85W" ]
+			then
+				# Anything should work on this.
+				echo "Detected $WATTAGE power cord, which is fine on this machine."
+			else
+				if [ "$WATTAGE" = "" ]
+				then
+					# No adapter attached
+					if [ -n "`echo $MODEL_IDENTIFIER | grep MacBook`" ]
+					then
+						echo "No adapter detected on this laptop."
+					fi
+					# otherwise, it's a desktop.
+				else
+					# Unknown wattage.  Update script.
+					echo "Unknown power adapter:  $WATTAGE"
+				fi
+			fi
+		fi
+	fi
+}
+
 
 
 
@@ -799,6 +852,11 @@ diag () {
 	IGNORE_SMART_ERRORS=1 # false
 	
 	MODEL_IDENTIFIER="`system_profiler SPHardwareDataType | awk '/Model Identifier/ { print $3 }'`"
+
+	if [ -n "`echo $MODEL_IDENTIFIER | grep MacBook`" ]
+	then
+		check_power_cord_wattage
+	fi
 
 	args=`getopt hlaisv:d:m: $*`
 	# you should not use `getopt abo: "$@"` since that would parse
