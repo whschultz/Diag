@@ -415,7 +415,7 @@ do_check_logs () {
 	then
 		echo "----------- Checking logs on mounted volume: " $1 " -----------"
 
-		do_show_all_logs "$1" | log_check.sh
+		do_show_all_logs "$1" | log_check.sh -v MODEL_IDENTIFIER="$MODEL_IDENTIFIER"
 #	else
 #		echo "    -- Folder does not exist, so no log files to check:  $1/var/log"
 	fi
@@ -442,7 +442,7 @@ do_show_errors () {
 	then
 		echo "----------- Showing errors in logs on volume: " $1 " -----------"
 
-		do_show_all_logs "$1" | log_check.sh -v print_all_errors=1 $DONT_SHOW_SECONDARY_IO $DONT_SHOW_UNPLUG $DONT_SHOW_SWAP_FULL $DONT_SHOW_HD_FULL $DONT_SHOW_FONT $DONT_SHOW_B2M $DONT_SHOW_MM $DONT_SHOW_AFSC $DONT_SHOW_SOUND $DONT_SHOW_GRAPHICS $DONT_SHOW_TM $DONT_SHOW_USB
+		do_show_all_logs "$1" | log_check.sh -v print_all_errors=1 -v MODEL_IDENTIFIER="$MODEL_IDENTIFIER" $DONT_SHOW_SECONDARY_IO $DONT_SHOW_UNPLUG $DONT_SHOW_SWAP_FULL $DONT_SHOW_HD_FULL $DONT_SHOW_FONT $DONT_SHOW_B2M $DONT_SHOW_MM $DONT_SHOW_AFSC $DONT_SHOW_SOUND $DONT_SHOW_GRAPHICS $DONT_SHOW_TM $DONT_SHOW_USB
 
 #	else
 #		echo "    -- Folder does not exist, so no log files to show:  $1/var/log"
@@ -798,13 +798,14 @@ diag () {
 	SHOW_LOGS_WHEN_DONE=1 # false
 	IGNORE_SMART_ERRORS=1 # false
 	
+	MODEL_IDENTIFIER="`system_profiler SPHardwareDataType | awk '/Model Identifier/ { print $3 }'`"
 
-	args=`getopt hlaisv:d: $*`
+	args=`getopt hlaisv:d:m: $*`
 	# you should not use `getopt abo: "$@"` since that would parse
 	# the arguments differently from what the set command below does.
 	if [ $? != 0 ]
 	then
-		echo 'Usage: diag [-h] [-l] [-a] [-i] [-s] [-v <volume mount point>] [-d <sound|graphics|tm|usb|mm|b2m|font|full|swap|unplug|2nd>]'
+		echo 'Usage: diag [-h] [-l] [-a] [-i] [-s] [-m <model identifier>] [-v <volume mount point>] [-d <sound|graphics|tm|usb|mm|b2m|font|full|swap|unplug|2nd>]'
 		echo '    run "diag -h" for more information'
 		return
 	fi
@@ -874,6 +875,9 @@ diag () {
 			-l)
 				SHOW_LOGS_WHEN_DONE=0 # true
 				shift;;
+			-m)
+				MODEL_IDENTIFIER="$2"; shift;
+				shift;;				
 			-i)
 				IGNORE_SMART_ERRORS=0 # true
 				shift;;
@@ -896,6 +900,8 @@ diag () {
 				echo '        run only SMART tests and then quit'
 				echo '    -v <volume mount point>'
 				echo '        run software tests on only this mount point'
+				echo '    -m <model identifier>'
+				echo '        specify the model identifier to be used when interpreting shutdown codes'
 				echo ''
 				echo '    -d <sound|graphics|tm|usb|mm|b2m|font|full|swap|unplug|2nd>'
 				echo "        when showing log files, don't show these errors:"
