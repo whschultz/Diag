@@ -578,29 +578,44 @@ do_check_offline_cache () {
 		
 		for USER in "$1"/Users/*
 		do
+			MAIL_SUBDIR="Library/Mail"
+
+			if [ -d "$USER"/Library/Mail/V2 ]
+			then
+				# 10.7 Lion
+				MAIL_SUBDIR="Library/Mail/V2"
+			fi
+
+
 			if [ -d "$USER"/"$MAIL_SUBDIR"/ ]
 			then
 	#			echo "-----------" $USER "-----------"
 	
 				for MAIL_FOLDER in "$USER"/"$MAIL_SUBDIR"/IMAP-*
 				do
-					COUNT=`find "$MAIL_FOLDER"/.OfflineCache | egrep -c '^.*[0-9]+$'`
-					
-					if [ $COUNT -gt 0 ]
+					if [ -d "$MAIL_FOLDER"/.OfflineCache ]
 					then
-						SIZE="`du -hx \"$MAIL_FOLDER\"/.OfflineCache | awk '{ print $1 }'`"
-						echo "	$SIZE:	\"$MAIL_FOLDER/.OfflineCache\""
+						COUNT=`find "$MAIL_FOLDER"/.OfflineCache | egrep -c '^.*[0-9]+$'`
+						
+						if [ $COUNT -gt 0 ]
+						then
+							SIZE="`du -hx \"$MAIL_FOLDER\"/.OfflineCache | awk '{ print $1 }'`"
+							echo "	$SIZE:	\"$MAIL_FOLDER/.OfflineCache\""
+						fi
 					fi
 				done
 				
 				for RECOVERED_FOLDER in "$USER"/"$MAIL_SUBDIR"/Mailboxes/Recovered*
 				do
-					COUNT=`find "$RECOVERED_FOLDER" | egrep -c ''`
-					
-					if [ $COUNT -gt 0 ]
+					if [ -d "$RECOVERED_FOLDER" ]
 					then
-						SIZE="`du -shx \"$RECOVERED_FOLDER\" | awk '{ print $1 }'`"
-						echo "\tExample:\t$SIZE\t\"$RECOVERED_FOLDER\""
+						COUNT=`find "$RECOVERED_FOLDER" | egrep -c ''`
+						
+						if [ $COUNT -gt 0 ]
+						then
+							SIZE="`du -shx \"$RECOVERED_FOLDER\" | awk '{ print $1 }'`"
+							echo "\tExample:\t$SIZE\t\"$RECOVERED_FOLDER\""
+						fi
 					fi
 				done
 			fi
