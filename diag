@@ -844,7 +844,7 @@ do_check_users () {
 					fi
 				done
 			else
-				echo $YELLOW"Can't currently test pre-10.5 users from a system running 10.5 or later.  Volume:  \"$1\""$RESET
+				echo $YELLOW"Can't test pre-10.5 users from a system running 10.5 or later.  NetIfo is not available.  Volume:  \"$1\""$RESET
 			fi
 		fi
 	fi
