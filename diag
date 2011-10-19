@@ -838,6 +838,8 @@ do_check_users () {
 			else
 				echo $YELLOW"There are no human users on volume \"$1\""$RESET
 			fi
+		else
+			echo "       Found $REAL_USER_COUNT user(s) on \"$1\""
 		fi
 	else
 		if [ -d "$1"/var/db/netinfo ]
@@ -868,6 +870,8 @@ do_check_users () {
 					else
 						echo $YELLOW"There are no human users on volume \"$1\""$RESET
 					fi
+				else
+					echo "       Found $REAL_USER_COUNT user(s) on \"$1\""
 				fi
 			else
 				echo $YELLOW"Can't test pre-10.5 users from a system running 10.5 or later.  NetIfo is not available.  Volume:  \"$1\""$RESET
