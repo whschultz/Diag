@@ -215,12 +215,34 @@ END {
 		for (reason in time_machine_failure_reasons) {
 			print reason "\t: " time_machine_failure_reasons[reason] "\t: " list_of_time_machine_explanations[reason];
 		}
+		
+		print "Worst amount of time between backups:  " worst_days_since_backup " as of " worst_date;
+		print "Last failed backup:  " last_failed_backup;
 	}
 	print ""
 }
 
+/backupd.*days since last backup/ {
+	if ( ignore_time_machine_errors == 0 )
+	{
+		last_failed_backup=$1 " " $2 " " $3;
+		split($0,backup_failed_row,": ");
+		split(backup_failed_row[2],days_since_backup_row," ");
+		days_since_backup=days_since_backup_row[1];
+		if ( days_since_backup > worst_days_since_backup )
+		{
+			worst_days_since_backup=days_since_backup;
+			worst_date=last_failed_backup;
+		}
 
-/backupd.*(Backup failed|FSMountServerVolumeSync failed with error|Error writing to backup log.*Input\/output error|Cookie file is not readable or does not exist|Volume at path.*does not appear to be the correct backup volume for this computer|days since last backup)/ {
+		handle_error_row($0,"Time Machine",YELLOW);
+	}
+	else
+		handle_ignored_error($0,"Time Machine",YELLOW);
+	next;
+}
+
+/backupd.*(Backup failed|FSMountServerVolumeSync failed with error|Error writing to backup log.*Input\/output error|Cookie file is not readable or does not exist|Volume at path.*does not appear to be the correct backup volume for this computer)/ {
 	if ( ignore_time_machine_errors == 0 )
 		handle_error_row($0,"Time Machine",YELLOW);
 	else
