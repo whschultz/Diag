@@ -218,8 +218,20 @@ END {
 		
 		print "Worst amount of time between backups:  " worst_days_since_backup " as of " worst_date;
 		print "Last failed backup:      " last_failed_backup;
-		print "Last successful backup:  " last_successful_backup
 	}
+	
+	if ( last_successful_backup != 0 )
+	{
+		print GREEN"Last successful backup:  " last_successful_backup RESET
+	}
+	else
+	{
+		if ( time_machine_error_count > 0 )
+			print RED"No successful Time Machine backups found."RESET
+		else
+			print YELLOW"No Time Machine backups found."RESET
+	}
+
 	print ""
 }
 
