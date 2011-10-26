@@ -636,6 +636,11 @@ list_internal_drives () {
 # SMART tests
 
 run_all_SMART_tests () {
+	RED=`tput setaf 1`
+	YELLOW=`tput setaf 3`
+	PURPLE=`tput setaf 5`
+	RESET=`tput sgr0`
+
 	# Turn on SMART support for the first drive.
 	# Show health of first drive, even if it's good.
 	if ( smartctl -s on -q errorsonly disk0 )
@@ -677,7 +682,7 @@ run_all_SMART_tests () {
 					# and there are errors
 					if [ $CURRENTPENDINGSECTORS -gt 0 ]
 					then
-						echo "Error:  $disk has current pending sectors: "  $CURRENTPENDINGSECTORS
+						echo $RED"Error:  $disk has current pending sectors: "  $CURRENTPENDINGSECTORS $RESET
 						FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
 						CONTINUE_TESTING=1 #false
 					fi 
@@ -694,7 +699,7 @@ run_all_SMART_tests () {
 						# and there are errors
 						if [ $OFFLINEUNC -gt 0 ]
 						then
-							echo "Error:  $disk has offline uncorrectable sectors: " $OFFLINEUNC
+							echo $RED"Error:  $disk has offline uncorrectable sectors: " $OFFLINEUNC $RESET
 							FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
 							CONTINUE_TESTING=1 #false
 						fi
@@ -709,7 +714,7 @@ run_all_SMART_tests () {
 					then
 						if [ $REALLOC -gt 0 ]
 						then
-							echo "Warning:  $disk has reallocated sectors: " $REALLOC
+							echo $PURPLE"Warning:  $disk has reallocated sectors: " $REALLOC $RESET
 							FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
 							CONTINUE_TESTING=1 #false
 						fi 
@@ -724,7 +729,7 @@ run_all_SMART_tests () {
 					then
 						if [ $REALLOC_EV -gt 0 ]
 						then
-							echo "Warning:  $disk has reallocated events: " $REALLOC_EV
+							echo $PURPLE"Warning:  $disk has reallocated events: " $REALLOC_EV $RESET
 							FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
 							CONTINUE_TESTING=1 #false
 						fi 
@@ -744,7 +749,7 @@ run_all_SMART_tests () {
 						POWER_ON_HOURS=`smartctl -A \$disk | awk '/Power_On_Hours/ { print $10 }'`
 						DAYS=`echo $POWER_ON_HOURS / 24 | bc`
 						HOURS=`echo "$POWER_ON_HOURS - 24 * $DAYS" | bc`
-						echo "Warning:  Found errors in SMART log for $disk at the following times:"
+						echo $YELLOW"Warning:  Found errors in SMART log for $disk at the following times:" $RESET
 						echo "    Current power on hours: $POWER_ON_HOURS ($DAYS days + $HOURS hours)"
 						smartctl -l error $disk | awk '/occurred at disk power-on lifetime/ { print "        " $0 }'
 						FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
