@@ -100,7 +100,7 @@ $0 ~ disk_IO_error_regexp {
 	next;
 }
 
-/(disk[1-9][0-9]*.*(I\/O (error|timeout)|\(UNDEFINED\))|device is not open|alignment error|fseventsd.*failed to unlink old log file.*\(Input\/output error\)|backupd.*Input\/output error)/ {
+/(disk[1-9][0-9]*.*(I\/O (error|timeout)|\(UNDEFINED\))|device is not open|fseventsd.*failed to unlink old log file.*\(Input\/output error\)|backupd.*Input\/output error)/ {
 	if ( last_multimedia_error < multimedia_limit )
 	{
 		# This disk error is still a multimedia error, and we need to treat it
@@ -131,7 +131,7 @@ BEGIN {
 	last_unplug_error=spacing+1;
 }
 
-/SAM Multimedia: READ or WRITE failed|disk[1-9][0-9]*.*unsupported mode/ {
+/SAM Multimedia: READ or WRITE failed|disk[1-9][0-9]*.*unsupported mode|disk[1-9][0-9]*.*alignment error/ {
 	last_multimedia_error=0;
 	if ( ignore_multimedia_errors == 0 )
 		handle_error_row($0,"Multimedia",YELLOW);
