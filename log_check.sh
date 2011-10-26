@@ -164,7 +164,7 @@ BEGIN {
 }
 
 /FireWire.*(bus resets in last.*minutes|no valid selfIDs.*after bus reset)/ {
-	handle_error_row($0,"FireWire",YELLOW);
+	handle_error_row($0,"FireWire",PURPLE);
 	next;
 }
 
