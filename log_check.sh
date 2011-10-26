@@ -216,8 +216,10 @@ END {
 			print reason "\t: " time_machine_failure_reasons[reason] "\t: " list_of_time_machine_explanations[reason];
 		}
 		
-		print "Worst amount of time between backups:  " worst_days_since_backup " as of " worst_date;
-		print "Last failed backup:      " last_failed_backup;
+		if ( worst_days_since_backup != 0 )
+			print "Worst amount of time between backups:  " worst_days_since_backup " as of " worst_date;
+		if ( last_failed_backup != 0 )
+			print "Last failed backup:      " last_failed_backup;
 	}
 	
 	if ( last_successful_backup != 0 )
