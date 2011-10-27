@@ -339,7 +339,7 @@ END {
 	next;
 }
 
-/Sound assertion.*failed/ {
+/Sound assertion.*failed|WARNING:.*(has detected that a connected.*audio device is sending too much audio data|This.*audio device may not function properly.*Please notify the device manufacturer)/ {
 	if ( ignore_sound_errors == 0 )
 		handle_error_row($0,"Sound",YELLOW);
 	else
