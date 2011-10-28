@@ -829,15 +829,18 @@ do_check_users () {
 				REAL_USER_COUNT=$(($REAL_USER_COUNT+1))
 				USERS_HOME="`defaults read \"$1\"/var/db/dslocal/nodes/Default/users/$USER home | awk '/\"/ { split($0,a,\"\\"\"); print a[2]; }'`"
 				#echo "$USER_ID  $USER  $USERS_HOME"
-				if [ \( ! -d "$USERS_HOME" \) -a \( ! -d "$1""$USERS_HOME" \) ]
+				if [ \( "$USERS_HOME" != "/dev/null" \) -a \( "$USERS_HOME" != "/var/empty" \) ]
 				then
-					echo $RED"Home directory for user \"$USER\" on \"$1\" does not exist!  Should be \"$USERS_HOME\""$RESET
-				else
-					if [ \( \( ! -d "$USERS_HOME/Documents" \) -a \( ! -d "$1""$USERS_HOME/Documents" \) \) \
-						-o \( \( ! -d "$USERS_HOME/Library" \) -a \( ! -d "$1""$USERS_HOME/Library" \) \) \
-						-o \( \( ! -d "$USERS_HOME/Desktop" \) -a \( ! -d "$1""$USERS_HOME/Desktop" \) \) ]
+					if [ \( ! -d "$USERS_HOME" \) -a \( ! -d "$1""$USERS_HOME" \) ]
 					then
-						echo $RED"Home directory for user \"$USER\" on \"$1\" is missing important folders!  Should be \"$USERS_HOME\""$RESET					
+						echo $RED"Home directory for user \"$USER\" on \"$1\" does not exist!  Should be \"$USERS_HOME\""$RESET
+					else
+						if [ \( \( ! -d "$USERS_HOME/Documents" \) -a \( ! -d "$1""$USERS_HOME/Documents" \) \) \
+							-o \( \( ! -d "$USERS_HOME/Library" \) -a \( ! -d "$1""$USERS_HOME/Library" \) \) \
+							-o \( \( ! -d "$USERS_HOME/Desktop" \) -a \( ! -d "$1""$USERS_HOME/Desktop" \) \) ]
+						then
+							echo $RED"Home directory for user \"$USER\" on \"$1\" is missing important folders!  Should be \"$USERS_HOME\""$RESET					
+						fi
 					fi
 				fi
 			fi
@@ -868,15 +871,18 @@ do_check_users () {
 					then
 						REAL_USER_COUNT=$(($REAL_USER_COUNT+1))
 						USERS_HOME="`nicl -raw \"$1\"/var/db/netinfo/local.nidb -read /users/$USER home | awk '// { print $2 }'`"
-						if [ \( ! -d "$USERS_HOME" \) -a \( ! -d "$1""$USERS_HOME" \) ]
+						if [ \( "$USERS_HOME" != "/dev/null" \) -a \( "$USERS_HOME" != "/var/empty" \) ]
 						then
-							echo $RED"Home directory for user $USER on $1 does not exist!  Should be $USERS_HOME"$RESET
-						else
-							if [ \( \( ! -d "$USERS_HOME/Documents" \) -a \( ! -d "$1""$USERS_HOME/Documents" \) \) \
-								-o \( \( ! -d "$USERS_HOME/Library" \) -a \( ! -d "$1""$USERS_HOME/Library" \) \) \
-								-o \( \( ! -d "$USERS_HOME/Desktop" \) -a \( ! -d "$1""$USERS_HOME/Desktop" \) \) ]
+							if [ \( ! -d "$USERS_HOME" \) -a \( ! -d "$1""$USERS_HOME" \) ]
 							then
-								echo $RED"Home directory for user \"$USER\" on \"$1\" is missing important folders!  Should be \"$USERS_HOME\""$RESET					
+								echo $RED"Home directory for user $USER on $1 does not exist!  Should be $USERS_HOME"$RESET
+							else
+								if [ \( \( ! -d "$USERS_HOME/Documents" \) -a \( ! -d "$1""$USERS_HOME/Documents" \) \) \
+									-o \( \( ! -d "$USERS_HOME/Library" \) -a \( ! -d "$1""$USERS_HOME/Library" \) \) \
+									-o \( \( ! -d "$USERS_HOME/Desktop" \) -a \( ! -d "$1""$USERS_HOME/Desktop" \) \) ]
+								then
+									echo $RED"Home directory for user \"$USER\" on \"$1\" is missing important folders!  Should be \"$USERS_HOME\""$RESET					
+								fi
 							fi
 						fi
 					fi
