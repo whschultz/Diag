@@ -512,6 +512,12 @@ BEGIN {
 		# depending on the machine that produces it.
 		list_of_explanations[-86]=RED"(Proximity temperature exceeds limits)"RESET;
 	}
+	else if ( MODEL_IDENTIFIER ~ /MacBook[0-9]+,[0-9]+/ )
+	{
+		# This code is not in the documentation for the MacBook, but it still comes up.
+		# Research seems to indicate it's a temperature issue on the MacBook.
+		list_of_explanations[-86]=RED"(Proximity temperature exceeds limits.  Check fan.)"RESET;
+	}
 	else if ( MODEL_IDENTIFIER ~ /MacBookAir[0-9]+,[0-9]+/ )
 	{
 		list_of_explanations[-86]=RED"(Charger circuit on logic board.)"RESET;
