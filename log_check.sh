@@ -203,6 +203,7 @@ BEGIN {
 	list_of_time_machine_explanations[18]=RED"Couldn't find backup (e.g. backup found but doesn't match this computer, or couldn't connect to server)"RESET;
 	list_of_time_machine_explanations[19]=YELLOW"Error while resolving alias to backup target"RESET;
 	list_of_time_machine_explanations[27]=YELLOW"Stopped backup because the backup volume was ejected"RESET;
+	list_of_time_machine_explanations[29]=YELLOW"Authentication failed"RESET;
 	list_of_time_machine_explanations[31]=PURPLE"Failed to mount disk image (e.g. disk image may already be mounted.  restart base station.)"RESET;
 }
 /backupd.*Backup failed with error: ([0-9]+)/ {
@@ -524,7 +525,7 @@ BEGIN {
 	}
 	else
 	{
-		list_of_explanations[-86]=RED"(Not in documentation for this model.)"RESET;
+		list_of_explanations[-86]=RED"(Not in documentation for this model.  Suspect overtemp.)"RESET;
 	}
 
 
