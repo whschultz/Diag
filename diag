@@ -921,7 +921,7 @@ check_power_cord_wattage () {
 		then
 			echo "Detected $WATTAGE power cord, which is fine on this machine."
 		else
-			echo $RED"This is only $WATTAGE power cord, which is not enough for this machine:  $MODEL_IDENTIFIER"$RESET
+			echo $RED"This is only a $WATTAGE power cord, which is not enough for this machine:  $MODEL_IDENTIFIER"$RESET
 		fi
 	else
 		if [ "$WATTAGE" = "60W" ]
@@ -935,16 +935,18 @@ check_power_cord_wattage () {
 				if [ -n "`echo $MODEL_IDENTIFIER | egrep 'MacBookPro(5,[45]|[78],1)'`" ]
 				then
 					# MacBookPro5,4  MacBookPro5,5  MacBookPro7,1  MacBookPro8,1
+					# Currently, this includes MacBook Pro (13-inch, Mid 2009), MacBook Pro (15-inch, 2.53GHz, Mid 2009),
+					# MacBook Pro (13-inch, Mid 2010), MacBook Pro (13-inch, Early 2011), MacBook Pro (13-inch, Late 2011)
 					echo "Detected $WATTAGE power cord, which is fine on this machine."				
 				else
-					echo $RED"This is only $WATTAGE power cord, which is not enough for this machine:  $MODEL_IDENTIFIER"$RESET
+					echo $RED"This is only a $WATTAGE power cord, which is not enough for this machine:  $MODEL_IDENTIFIER"$RESET
 				fi
 			fi
 		else
 			if [ "$WATTAGE" = "85W" ]
 			then
 				# Anything should work on this.
-				echo "Detected $WATTAGE power cord, which is fine on this machine."
+				echo "Detected a $WATTAGE power cord, which is fine on this machine."
 			else
 				if [ "$WATTAGE" = "" ]
 				then
