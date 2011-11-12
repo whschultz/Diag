@@ -13,6 +13,7 @@
 		<string>/opt/local/sbin/smartctl</string>
 		<string>/Users/whschultz/Documents/Diag/diag</string>
 		<string>/Users/whschultz/Documents/Diag/platypus.command</string>
+		<string>/Users/whschultz/Documents/Diag/log_check.sh</string>
 	</array>
 	<key>Creator</key>
 	<string>Platypus-4.4</string>
