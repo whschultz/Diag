@@ -91,9 +91,31 @@ fi
 
 
 check_for_panic_logs () {
+	RED=`tput setaf 1`
+	YELLOW=`tput setaf 3`
+	RESET=`tput sgr0`
+
 	if [ -e "$1"/Library/Logs ]
 	then
 		TOTAL_LOG_FILES=`find -E "$1"/Library/Logs -regex '^.*\.panic$' | wc -l`
+		
+		if [ $TOTAL_LOG_FILES -gt 0 ]
+		then
+			TEMP_COUNT=0
+			for FILE in "$1"/Library/Logs/*/*.panic
+			do
+				#echo "Dating panic log:  " $FILE
+				if [ $TEMP_COUNT -eq 0 ]
+				then
+					NEWEST="$FILE"
+				else
+					if [ "$FILE" -nt "$NEWEST" ]
+					then
+						NEWEST="$FILE"
+					fi
+				fi
+			done
+		fi
 		
 		if [ -e "$1"/Library/Logs/panic.log ]
 		then
@@ -106,7 +128,12 @@ check_for_panic_logs () {
 	
 		if [ $TOTAL_LOGS -gt 0 ]
 		then
-			echo "Warning:  Found" $TOTAL_LOGS "panic logs on $1."
+			echo $RED"Warning:  Found $TOTAL_LOGS panic logs on $1"$RESET
+			if [ "$NEWEST" ]
+			then
+				DATE_OF_NEWEST=`echo "$NEWEST" | sed -E 's/.*Kernel_(([0-9]+-?)+)_.*panic/\1/g'`
+				echo $YELLOW"    Date of newest panic from 10.5 or later:  $DATE_OF_NEWEST"$RESET
+			fi
 		fi
 	fi
 }
