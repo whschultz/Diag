@@ -436,20 +436,23 @@ END {
 }
 /Previous (Shutdown|Sleep) Cause/ {
 	# Intel
-	if ( ! ( $9 in list_of_explanations ) )
+	if ( $9 ~ /^-?[0-9]+$/ )
 	{
-		list_of_explanations[$9]=BOLD RED"(abnormal, not found in documentation)"RESET;
-	}
-	
-	if ( ( print_all_errors == 1 && $9 < 0 && $9 != -5 ) || print_all_shutdown_causes == 1 )
-		print $7 "   \tat " $1 " " $2 " " $3 "\t: " $9 "\t" list_of_explanations[$9];
+		if ( ! ( $9 in list_of_explanations ) )
+		{
+			list_of_explanations[$9]=BOLD RED"(abnormal, not found in documentation)"RESET;
+		}
 		
-	list_of_causes[$9]++;
-	show_summary=1;
-	if ( $9 > max )
-		max = $9;
-	if ( $9 < min )
-		min = $9;
+		if ( ( print_all_errors == 1 && $9 < 0 && $9 != -5 ) || print_all_shutdown_causes == 1 )
+			print $7 "   \tat " $1 " " $2 " " $3 "\t: " $9 "\t" list_of_explanations[$9];
+			
+		list_of_causes[$9]++;
+		show_summary=1;
+		if ( $9 > max )
+			max = $9;
+		if ( $9 < min )
+			min = $9;
+	}
 }
 BEGIN {
 # this BEGIN statement ties in with the above shutdown codes regex
