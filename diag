@@ -592,6 +592,45 @@ run_all_SMART_tests () {
 						fi 
 					fi
 				fi
+
+				if [ $CONTINUE_TESTING -eq 0 -o $IGNORE_SMART_ERRORS -eq 0 ]
+				then
+					# else move on to the next attribute
+					BAD_CLUSTER=`smartctl -A \$disk | awk '/Bad_Cluster_Table_Count/ { print $10 }'`
+					if [ -n "$BAD_CLUSTER" ] 
+					then
+						if [ $BAD_CLUSTER -gt 0 ]
+						then
+							echo $PURPLE"Warning:  $disk has bad cluster tables: " $BAD_CLUSTER $RESET
+							FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
+							CONTINUE_TESTING=1 #false
+						fi 
+					fi
+				fi
+
+				if [ $CONTINUE_TESTING -eq 0 -o $IGNORE_SMART_ERRORS -eq 0 ]
+				then
+					# else move on to the next attribute
+					ERASE_COUNT_VALUE=`smartctl -A \$disk | awk '/Erase_Count/ { print $4 }'`
+					ERASE_COUNT_THRESH=`smartctl -A \$disk | awk '/Erase_Count/ { print $6 }'`
+					ERASE_COUNT_RAW=`smartctl -A \$disk | awk '/Erase_Count/ { print $10 }'`
+					if [ -n "$ERASE_COUNT_RAW" ] 
+					then
+						# This calculation is a wild guess.  On the one drive I've tested so far,
+						# awk column $10 gives what appears may be percentage consumed (1%), whereas
+						# the threshhold was at 100, and the value was at 199.  It's not clear yet
+						# which numbers mean what.
+						ERASE_PERCENT=`echo 100 - $ERASE_COUNT_RAW | bc`
+						if [ $ERASE_PERCENT -gt 50 ]
+						then
+							echo $YELLOW"SSD $disk appears to be at $ERASE_PERCENT% life." $RESET
+						else
+							echo $PURPLE"Warning:  $disk appears to be at $ERASE_PERCENT% life" $RESET
+							FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
+							CONTINUE_TESTING=1 #false
+						fi 
+					fi
+				fi
 				
 				if [ $CONTINUE_TESTING -eq 0 -o $IGNORE_SMART_ERRORS -eq 0 ]
 				then
