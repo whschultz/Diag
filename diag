@@ -711,7 +711,7 @@ find_ppc_apps () {
 do_find_ppc_apps () {
 	if [ -e "$1"/Applications ]
 	then
-		find "$1"/Applications -regex ".*\.app/Contents/Info\.plist"  | awk '// {\
+		find "$1"/Applications -regex ".*\.app/Contents/Info\.plist" | sed -E 's/^(.*)\.plist$/\1/g' | awk '// {\
 			command_for_bundle="defaults read \""$0"\" CFBundleExecutable";\
 			command_for_bundle | getline BUNDLE_EXECUTABLE;\
 			close(command_for_bundle);\
