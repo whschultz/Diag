@@ -125,7 +125,7 @@ check_for_panic_logs () {
 			if [ "$NEWEST" ]
 			then
 				DATE_OF_NEWEST=`echo "$NEWEST" | sed -E 's/.*(Kernel_|\/)(([0-9]+-?)+)_?.*panic/\2/g'`
-				echo $YELLOW"    Date of newest panic from 10.5 or later:  $DATE_OF_NEWEST"$RESET
+			#	echo $YELLOW"    Date of newest panic from 10.5 or later:  $DATE_OF_NEWEST"$RESET
 			fi
 		fi
 		
