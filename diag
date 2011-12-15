@@ -722,7 +722,7 @@ do_find_ppc_apps () {
 			next;\
 		}' | sed -E "s/([ \"'])/"'\\\1/g' | xargs -n 1 -J % file % | awk '// { split($0,half,":"); \
 			split(half[2],a," ");\
-			if ( a[2] == "universal" || a[3] == "universal" || a[2] == "shell" || a[3] == "script" )\
+			if ( a[2] == "universal" || a[3] == "universal" || a[2] == "shell" || a[3] == "script" || ( a[1] == "cannot" && a[2] == "open" ) )\
 				next;\
 			split(half[1],b,"\(");\
 			app_name=b[1];\
