@@ -328,7 +328,13 @@ END {
 	}
 }
 
-
+/Allocator race detected: transaction is not verified for/ {
+	if ( ignore_potential_hang == 0 )
+		handle_error_row($0,"Potential Hang",PURPLE);
+	else
+		handle_ignored_error($0,"Potential Hang",PURPLE);
+	next;
+}
 
 /mDNSResponder.*(Double NAT|Failed to obtain NAT port mapping|Registration of record.*members\.mac\.com\..*failed)/ {
 	if ( ignore_back_to_my_mac_errors == 0 )
