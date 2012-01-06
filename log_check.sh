@@ -91,7 +91,7 @@ $0 ~ disk_IO_error_regexp {
 	next;
 }
 
-/disk[1-9][0-9]*.*(media is not present|device\/channel is not attached)|msdosfs_fat_uninit_vol: error 6 from msdosfs_fat_cache_flush|fseventsd.*disk logger.*failed to open output file.*No such file or directory/ {
+/disk[1-9][0-9]*.*(media is not present|device\/channel is not attached)|msdosfs_fat_uninit_vol: error 6 from msdosfs_fat_cache_flush|fseventsd.*disk logger.*failed to open output file.*No such file or directory|Volumes.*fseventsd out of sync with volume|jnl.*(replay_journal: from|journal replay done)/ {
 	last_unplug_error=0;
 	if ( ignore_unplug_errors == 0 )
 		handle_error_row($0,"Improperly unplugged external device",BLUE);
