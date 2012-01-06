@@ -243,6 +243,11 @@ do_show_all_logs () {
 	then
 		cat "$1"/var/log/system.log
 	fi
+	
+	if [ -e "$1"/var/log/fsck_hfs.log ]
+	then
+		cat "$1"/var/log/fsck_hfs.log
+	fi
 }
 
 
