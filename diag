@@ -210,9 +210,13 @@ show_all_logs () {
 
 do_show_all_logs () {
 	# show logs in proper order from oldest to newest
+	
+	GREEN=`tput setaf 2`
+	RESET=`tput sgr0`
+
 	if [ -e "$1"/var/log/kernel.log ]
 	then
-		echo "----------- Showing errors from $1/var/log/kernel.log* -----------"
+		echo $GREEN"----------- Showing errors from $1/var/log/kernel.log* -----------"$RESET
 
 		for NUMBER in 9 8 7 6 5 4 3 2 1 0
 		do
@@ -232,7 +236,7 @@ do_show_all_logs () {
 	
 	if [ -e "$1"/var/log/system.log ]
 	then
-		echo "----------- Showing errors from $1/var/log/system.log* -----------"
+		echo $GREEN"----------- Showing errors from $1/var/log/system.log* -----------"$RESET
 
 		for NUMBER in 9 8 7 6 5 4 3 2 1 0
 		do
@@ -251,7 +255,7 @@ do_show_all_logs () {
 	
 	if [ -e "$1"/var/log/fsck_hfs.log ]
 	then
-		echo "----------- Showing errors from $1/var/log/fsck_hfs.log -----------"
+		echo $GREEN"----------- Showing errors from $1/var/log/fsck_hfs.log -----------"$RESET
 
 		cat "$1"/var/log/fsck_hfs.log
 	fi
