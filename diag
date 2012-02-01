@@ -358,6 +358,9 @@ show_OS_versions () {
 }
 
 
+show_battery_status () {
+	ioreg -n AppleSmartBattery | grep -v '+'
+}
 
 
 check_preferences () {
