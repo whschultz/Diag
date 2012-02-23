@@ -405,7 +405,9 @@ do_check_preferences () {
 		then
 			if [ $(dirname `defaults read /Volumes/Macintosh\ HD/Users/johnpierce/.MacOSX/environment.plist DYLD_INSERT_LIBRARIES`) = "/Users/Shared" ]
 			then
-				echo $RED"WARNING:  USER AT " $USER "IS LIKELY INFECTED WITH FLASHBACK.G"
+				# Note that this is a VERY basic check.  If your environment loads DYLDs from 
+				# /Users/Shared, you will be flagged.
+				echo $RED"WARNING:  USER AT " $USER "MAY BE INFECTED WITH FLASHBACK.G"
 				echo "DELETE THE FOLLOWING FILES:"
 				echo $USER"/.MacOSX/environment.plist"
 				echo $1"$(defaults read /Volumes/Macintosh\ HD/Users/johnpierce/.MacOSX/environment.plist DYLD_INSERT_LIBRARIES)"$RESET
