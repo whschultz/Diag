@@ -39,9 +39,9 @@ BEGIN {
 # Main END statement.  Gives a count of the error types encountered
 END {
 	#print "Done"
-	print "Summary of errors encountered\ncount\t: error type";
+	print "Summary of errors encountered\ncount\t: last date\t\t: error type";
 	for ( error_type in error_counts )
-		print error_colors[error_type] error_counts[error_type] "\t: " error_type RESET;
+		print error_colors[error_type] error_counts[error_type] "\t: " error_dates[error_type] "\t: " error_type RESET;
 #	RESET()
 	print ""
 }
@@ -763,20 +763,30 @@ function handle_normal_line(line_text) {
 
 function handle_ignored_error(row_text,error_type,color) {
 # count the errors but don't highlight them when showing logs
-	handle_error_counts(error_type,color);
+	handle_error_counts(row_text,error_type,color);
 	handle_normal_line(row_text);
 }
 
-function handle_error_counts(error_type,color) {
+function handle_error_counts(row_text,error_type,color) {
 	error_counts[error_type]++;
 	error_colors[error_type]=color;
+	
+	split(row_text,row_text_entries," ");
+	if ( row_text_entries[2] < 10 )
+	{
+		error_dates[error_type]=row_text_entries[1] "  " row_text_entries[2] " " row_text_entries[3];
+	}
+	else
+	{
+		error_dates[error_type]=row_text_entries[1] " " row_text_entries[2] " " row_text_entries[3];	
+	}
 }
 
 function handle_error_row(row_text,error_type,color) {
 	last_error=error_type;
 	last_color=color;
 	
-	handle_error_counts(error_type,color);
+	handle_error_counts(row_text,error_type,color);
 	handle_additional_error_row( row_text,error_type,color );
 }
 
