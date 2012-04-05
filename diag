@@ -461,7 +461,7 @@ do_check_flashback () {
 		"tput setaf 1" | getline RED;\
 		"tput setaf 2" | getline GREEN;\
 		"tput sgr0" | getline RESET;\
-		print "Testing browser " $0;\
+		print "        Testing browser " $0;\
 		command_for_plist_test="defaults read \""$0"\"/Contents/Info.plist LSEnvironment 2> /dev/null";\
 		command_for_plist_test | getline LIBRARIES;\
 		close(command_for_plist_test);\
@@ -470,7 +470,7 @@ do_check_flashback () {
 			print RED"WARNING:  BROWSER AT " $0 "MAY BE INFECTED WITH FLASHBACK.G!!!  See http://www.f-secure.com/v-descs/trojan-downloader_osx_flashback_i.shtml for more info."RESET;\
 		}\
 		else\
-			print GREEN"clean"RESET; \
+			print GREEN"        clean"RESET; \
 		}'
 }
 
