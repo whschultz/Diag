@@ -161,6 +161,16 @@ BEGIN {
 	next;
 }
 
+/InterfaceNamer.*Touchpad/ {
+	handle_error_row($0,"IOKit - Trackpad",PURPLE);
+	next; # keep this inside the "if" statement
+}
+
+/InterfaceNamer.*AppleEFIRuntime/ {
+	handle_error_row($0,"IOKit - EFI",PURPLE);
+	next; # keep this inside the "if" statement
+}
+
 /InterfaceNamer/ {
 	if ( lines_since_error==0 )
 	{
