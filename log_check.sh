@@ -340,7 +340,7 @@ END {
 }
 
 END {
-# this END statement gives the summary from the above Time Machines failure causes
+# this END statement gives the summary from the above login failures
 	if ( login_failure_count > 0 ) {		
 		print "Failed user logins\ncount\t: name";
 		for (name in account_login_failure) {
