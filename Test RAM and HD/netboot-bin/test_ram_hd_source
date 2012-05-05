@@ -130,6 +130,7 @@ awk '/Found bad block/ { total=total+1; } \
 	total=0;\
 	slow=0;\
 }\
+/((Error:|Warning|SSD).*\/dev\/)|SMART|Current power on hours|occurred at disk power-on lifetime/ { print $0 }\
 BEGIN {\
 	date_count=0;\
 }\
