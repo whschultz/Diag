@@ -1,5 +1,7 @@
 #!/bin/sh
 
+# Put this file in /var/root/bin on your tester drive.  Make sure this is in root's path.
+
 # This script configures netboot the same as /etc/rc.netboot but
 # should be usable from single-user mode.
 

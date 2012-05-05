@@ -1,12 +1,9 @@
 #!/bin/sh
 
+# Put this file in /var/netboot/bin on your tester drive.  Make sure this is in root's path.
+# Additionally, put this file in NetBootClients0/bin on your netboot server.
 
 source /var/netboot/bin/test_ram_hd_source
-
-#if [ ! -d /var/netboot/Tests/$SERIALNUMBER ]
-#then
-#	mount_network_share >& /dev/null
-#fi
 
 show_hd_test_summary
 show_ram_test_summary
