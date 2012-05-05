@@ -10,15 +10,15 @@ then
 	# If that succeeded, remove our test file
 	rm /var/netboot/tmp_write_test
 else
-	# If that didn't succeed, try to mount root as writeable.  This will spew out a ton of
-	# errors if netbooted.  Therefore, if this script is going on a netboot image, remove
-	# the following one line to reduce errors.  Note that everything will still work fine,
-	# even with the error messages, so it's not a big deal either way; it just freaks
-	# people out.
-	mount -uw /
-	
-	# This won't do much of anything if not netbooted
-	mount_network_share
+	if [ `df -l | awk '/\/$/ { if ( $1 ~ /dev/disk ) print "yes"; else print "no"; }'` -eq "yes" ]
+	then
+		# Booted from a drive
+		mount -uw /
+	else
+		# Netbooted
+		mount_network_share
+		mount -uw /
+	fi
 fi
 
 # Run the script that is most likely located on the server.  Functioning this way allows
