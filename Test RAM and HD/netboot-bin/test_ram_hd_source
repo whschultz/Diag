@@ -1,0 +1,458 @@
+#!/bin/sh
+
+#mount -uw /
+#mount_network_share
+
+TERM=xterm-color
+
+MEMTESTLIMIT=20
+HDBADBLOCKLIMIT=1
+
+export SERIALNUMBER="`system_profiler SPHardwareDataType | awk '/r \(system\)/ { print $4 }'`"
+
+trap handle_trap SIGINT SIGTERM
+trap handle_exit EXIT
+
+handle_trap () {
+	handle_trap_without_exit
+	exit 1
+}
+
+handle_trap_without_exit () {
+	echo "exiting due to ctrl-c..."
+	
+	if [ -e /var/netboot/Tests/$SERIALNUMBER/memtest.pid ]
+	then
+		kill -KILL `cat /var/netboot/Tests/$SERIALNUMBER/memtest.pid`
+		rm /var/netboot/Tests/$SERIALNUMBER/memtest.pid
+	fi
+
+	for MEMTESTPID in `ps -axwww | grep memtest | awk '// { print $1 }'`
+	do
+		kill -KILL $MEMTESTPID >& /dev/null
+	done
+	
+	for BADBLOCKSPID in `ps -axwww | grep badblocks | awk '// { print $1 }'`
+	do
+		kill -INT $BADBLOCKSPID >& /dev/null
+	done
+
+	show_hd_test_summary
+	show_ram_test_summary
+	
+}
+
+handle_exit () {
+	echo "Cleaning up on exit..."
+	if [ -e /var/netboot/Tests/$SERIALNUMBER/memtest.pid ]
+	then
+		kill -KILL `cat /var/netboot/Tests/$SERIALNUMBER/memtest.pid`
+		rm /var/netboot/Tests/$SERIALNUMBER/memtest.pid
+	fi
+	
+	exit 0
+}
+
+
+run_tests () {
+	mkdir -p /var/netboot/Tests/$SERIALNUMBER/
+	
+	#cd /var/netboot/Tests/$SERIALNUMBER/
+	
+	if [ -e /var/netboot/Tests/$SERIALNUMBER/memtest.pid ]
+	then
+		kill -KILL `cat /var/netboot/Tests/$SERIALNUMBER/memtest.pid`
+		rm /var/netboot/Tests/$SERIALNUMBER/memtest.pid
+	fi
+	echo "" >> /var/netboot/Tests/$SERIALNUMBER/memtest.log
+	date >> /var/netboot/Tests/$SERIALNUMBER/memtest.log
+	/Applications/Rember.app/Contents/Resources/memtest all $MEMTESTLIMIT >> /var/netboot/Tests/$SERIALNUMBER/memtest.log 2>&1 &
+	jobs -l | awk '/memtest/ { print $2 }' > /var/netboot/Tests/$SERIALNUMBER/memtest.pid
+	
+	echo "" >> /var/netboot/Tests/$SERIALNUMBER/hd_test.log
+	date >> /var/netboot/Tests/$SERIALNUMBER/hd_test.log
+
+	run_all_smart_tests | tee -a /var/netboot/Tests/$SERIALNUMBER/hd_test.log
+	
+	badblocks -m -v -e $HDBADBLOCKLIMIT /dev/rdisk0 1 >& /dev/null # spin up the drive and prep the first block
+	
+	badblocks -m -v -e $HDBADBLOCKLIMIT /dev/rdisk0 2>&1 | tee -a /var/netboot/Tests/$SERIALNUMBER/hd_test.log
+}
+
+#tail -n 1000 -f memtest.log
+
+#BADBLOCKS="`awk '/Found bad block/ { total=total+1; } END { print total; }' hd_test.log`"
+
+show_hd_test_summary () {
+if [ -e /var/netboot/Tests/$SERIALNUMBER/hd_test.log ]
+then
+awk '/Found bad block/ { total=total+1; } \
+/[0-9]+ ms:.*[0-9]+/ {\
+	"tput setaf 1" | getline RED;\
+	"tput setaf 3" | getline YELLOW;\
+	"tput setaf 2" | getline GREEN;\
+	"tput sgr0" | getline RESET;\
+	if ( $2 < 100 ) \
+		print GREEN $0 RESET;\
+	else if ( $2 < 750 )\
+		print YELLOW $0 RESET;\
+	else {\
+		print RED $0 RESET;\
+		slow=slow+$4;\
+	}\
+}\
+/bad:.*[0-9]+/ {\
+	"tput setaf 1" | getline RED;\
+	"tput sgr0" | getline RESET;\
+	total=$2;\
+	if ( $2 > 0 ) \
+		print RED $0 RESET;\
+	else\
+		print GREEN $0 RESET;\
+}\
+/(Mon|Tue|Wed|Thu|Fri|Sat|Sun).*/ {\
+	"tput setaf 5" | getline PURPLE;\
+	"tput sgr0" | getline RESET;\
+	if ( date_count > 0 ) {\
+		handle_end_of_test( $0 );}\
+	else {\
+		print PURPLE $0 RESET; }\
+	date_count=date_count+1;\
+	total=0;\
+	slow=0;\
+}\
+BEGIN {\
+	date_count=0;\
+}\
+END {\
+	handle_end_of_test( "" );\
+}\
+function handle_end_of_test(date) {\
+	"tput setaf 5" | getline PURPLE;\
+	"tput setaf 1" | getline RED;\
+	"tput setaf 2" | getline GREEN;\
+	"tput sgr0" | getline RESET;\
+	if ( total > 0 ) {\
+		print RED"Hard drive is bad.  Found " total " bad blocks before stopping."RESET;\
+	} else {\
+		print "Hard drive has no bad blocks.";\
+	if ( slow > 0 )\
+		print RED"Hard drive has slow blocks and may not be trustworthy"RESET; }\
+	print PURPLE date RESET;\
+}' /var/netboot/Tests/$SERIALNUMBER/hd_test.log
+fi
+}
+
+show_limited_ram_test_summary () {
+if [ -e /var/netboot/Tests/$SERIALNUMBER/memtest.log ]
+then
+awk '/FAILURE/ { failed=failed+1; }\
+/Test sequence/ {\
+	current_test=$3;\
+}\
+/All tests passed/ {\
+	current_test=current_test+1;\
+}\
+/(Mon|Tue|Wed|Thu|Fri|Sat|Sun).*/ {\
+	failed=0;\
+}\
+END {\
+	handle_end_of_test( "" );\
+}\
+function handle_end_of_test(date) {\
+	"tput setaf 1" | getline RED;\
+	"tput setaf 3" | getline YELLOW;\
+	"tput setaf 2" | getline GREEN;\
+	"tput setaf 5" | getline PURPLE;\
+	"tput sgr0" | getline RESET;\
+	print PURPLE date RESET;\
+	if ( failed > 0 )\
+		print RED"This machine failed memtest"RESET;\
+	else\
+		print GREEN"This machine passed "current_test-1" iterations of memtest"RESET;\
+}' /var/netboot/Tests/$SERIALNUMBER/memtest.log
+fi
+}
+
+show_ram_test_summary () {
+if [ -e /var/netboot/Tests/$SERIALNUMBER/memtest.log ]
+then
+awk '/FAILURE/ { failed=failed+1; }\
+/Test sequence/ {\
+	current_test=$3;\
+}\
+/All tests passed/ {\
+	current_test=current_test+1;\
+}\
+/(Mon|Tue|Wed|Thu|Fri|Sat|Sun).*/ {\
+	"tput setaf 5" | getline PURPLE;\
+	"tput sgr0" | getline RESET;\
+	if ( date_count > 0 ) {\
+		handle_end_of_test( $0 );}\
+	else {\
+		print PURPLE $0 RESET; }\
+	date_count=date_count+1;\
+}\
+END {\
+	handle_end_of_test( "" );\
+}\
+function handle_end_of_test(date) {\
+	"tput setaf 1" | getline RED;\
+	"tput setaf 3" | getline YELLOW;\
+	"tput setaf 2" | getline GREEN;\
+	"tput setaf 5" | getline PURPLE;\
+	"tput sgr0" | getline RESET;\
+	if ( failed > 0 )\
+		print RED"This machine failed memtest"RESET;\
+	else\
+		print GREEN"This machine passed "current_test-1" iterations of memtest"RESET;\
+	print PURPLE date RESET;\
+}' /var/netboot/Tests/$SERIALNUMBER/memtest.log
+fi
+}
+
+
+follow_ram_test () {
+	echo "Following RAM test results..."
+	
+	CURRENTITERSCOUNT="`awk '/Test sequence 1 of/ {\
+failed=0;\
+}\
+/Test sequence/ {\
+current_test=$3;\
+}\
+/All tests passed/ {\
+current_test=current_test+1;\
+}\
+END { print current_test; }' /var/netboot/Tests/$SERIALNUMBER/memtest.log`"
+		
+	CURRENTFAILURECOUNT="`awk '/FAILURE/ { failed=failed+1; }\
+BEGIN { failed=0; }\
+/Test sequence 1 of/ {\
+failed=0;\
+}\
+END {\
+print failed;\
+}' /var/netboot/Tests/$SERIALNUMBER/memtest.log`"
+
+	if [ $CURRENTFAILURECOUNT -gt 0 ]
+	then
+		exit 0;
+	fi
+	
+	echo "will sleep fifteen minutes between updates of memtest results..."
+	
+	while [ $CURRENTITERSCOUNT -lt $MEMTESTLIMIT -a $CURRENTFAILURECOUNT -eq 0  ]
+	do
+		show_limited_ram_test_summary
+		
+		if sleep 900 # fifteen minutes		
+		then
+			sleep 0 # noop
+		else
+			CURRENTITERSCOUNT=$MEMTESTLIMIT
+			handle_trap_without_exit
+			continue
+		fi
+	
+		CURRENTITERSCOUNT="`awk '/Test sequence 1 of/ {\
+failed=0;\
+}\
+/Test sequence/ {\
+current_test=$3;\
+}\
+/All tests passed/ {\
+current_test=current_test+1;\
+}\
+END { print current_test; }' /var/netboot/Tests/$SERIALNUMBER/memtest.log`"
+		
+		CURRENTFAILURECOUNT="`awk '/FAILURE/ { failed=failed+1; }\
+BEGIN { failed=0; }\
+/Test sequence 1 of/ {\
+failed=0;\
+}\
+END {\
+print failed;\
+}' /var/netboot/Tests/$SERIALNUMBER/memtest.log`"
+		
+		if [ $CURRENTFAILURECOUNT -gt 0 ]
+		then
+			echo "Exiting due to RAM failure..."
+			handle_trap_without_exit
+			continue
+		fi
+	done
+}
+
+run_all_smart_tests () {
+	RED=`tput setaf 1`
+	YELLOW=`tput setaf 3`
+	PURPLE=`tput setaf 5`
+	RESET=`tput sgr0`
+
+	smartctl='/opt/local/sbin/smartctl'
+
+	# Turn on SMART support for the first drive.
+	# Show health of first drive, even if it's good.
+	if ( $smartctl -s on -q errorsonly disk0 )
+	then
+		$smartctl -H disk0
+	else
+		echo "Initial drive does not support SMART.  Note: USB and Firewire do not Support SMART."
+	fi
+	
+	FOUND_HARD_DRIVE_ERRORS=0
+	
+	# Show health of remaining drives only if they exist, are supported, and are bad.
+	
+	# And yes, this implementation does mean that if there are more than ten drives/images attached
+	# that only the first ten will be checked.  This could be rewritten/refactored to take
+	# take advantage of the new list_internal_drives function, but the existing method asks the drive
+	# itself whether it supports SMART, whereas using list_internal_drives makes assumptions about
+	# which drives will support SMART.
+	for disk in /dev/disk[0-9]
+	do
+		if [ -e $disk ]
+		then
+			# Try to turn on SMART, and check the tables if it's supported
+			if ( $smartctl -s on -q errorsonly $disk )
+			then
+				if [ $disk != /dev/disk0 ]
+				then
+					$smartctl -H -q errorsonly $disk
+				fi
+				
+				#true
+				#CONTINUE_TESTING=0
+				
+				# HDD-specific tests
+				
+				CURRENTPENDINGSECTORS=`$smartctl -A \$disk | awk '/Current_Pending_Sector/ { print $10 }'`
+				
+				# if this attribute exists
+				if [ -n "$CURRENTPENDINGSECTORS" ] 
+				then 
+					# and there are errors
+					if [ $CURRENTPENDINGSECTORS -gt 0 ]
+					then
+						echo $RED"Error:  $disk has current pending sectors: "  $CURRENTPENDINGSECTORS $RESET
+						FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
+						#CONTINUE_TESTING=1 #false
+					fi 
+				fi
+				
+				#if [ $CONTINUE_TESTING -eq 0 -o $IGNORE_SMART_ERRORS -eq 0 ]
+				#then
+					# else move on to the next attribute
+					OFFLINEUNC=`$smartctl -A \$disk | awk '/Offline_Uncorrectable/ { print $10 }'`
+					
+					# if this attribute exists
+					if [ -n "$OFFLINEUNC" ] 
+					then 
+						# and there are errors
+						if [ $OFFLINEUNC -gt 0 ]
+						then
+							echo $RED"Error:  $disk has offline uncorrectable sectors: " $OFFLINEUNC $RESET
+							FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
+							CONTINUE_TESTING=1 #false
+						fi
+					fi
+				#fi
+				
+				#if [ $CONTINUE_TESTING -eq 0 -o $IGNORE_SMART_ERRORS -eq 0 ]
+				#then
+					# else move on to the next attribute
+					REALLOC=`$smartctl -A \$disk | awk '/Reallocated_Sector_Ct/ { print $10 }'`
+					if [ -n "$REALLOC" ] 
+					then
+						if [ $REALLOC -gt 0 ]
+						then
+							echo $PURPLE"Warning:  $disk has reallocated sectors: " $REALLOC $RESET
+							FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
+							CONTINUE_TESTING=1 #false
+						fi 
+					fi
+				#fi
+
+				#if [ $CONTINUE_TESTING -eq 0 -o $IGNORE_SMART_ERRORS -eq 0 ]
+				#then
+					# else move on to the next attribute
+					REALLOC_EV=`$smartctl -A \$disk | awk '/Reallocated_Event_Count/ { print $10 }'`
+					if [ -n "$REALLOC_EV" ] 
+					then
+						if [ $REALLOC_EV -gt 0 ]
+						then
+							echo $PURPLE"Warning:  $disk has reallocated events: " $REALLOC_EV $RESET
+							FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
+							CONTINUE_TESTING=1 #false
+						fi 
+					fi
+				#fi
+
+				# SSD-specific tests
+				# This looks like a decent resource:  http://crystalmark.info/software/CrystalDiskInfo/manual-en/HealthStatus.html
+				# More info will be needed on how to treat these as failures.
+				#if [ $CONTINUE_TESTING -eq 0 -o $IGNORE_SMART_ERRORS -eq 0 ]
+				#then
+					# else move on to the next attribute
+					BAD_CLUSTER=`$smartctl -A \$disk | awk '/Bad_Cluster_Table_Count/ { print $10 }'`
+					if [ -n "$BAD_CLUSTER" ] 
+					then
+						if [ $BAD_CLUSTER -gt 0 ]
+						then
+							echo $PURPLE"Warning:  $disk has bad cluster tables: " $BAD_CLUSTER $RESET
+							FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
+							CONTINUE_TESTING=1 #false
+						fi 
+					fi
+				#fi
+
+				#if [ $CONTINUE_TESTING -eq 0 -o $IGNORE_SMART_ERRORS -eq 0 ]
+				#then
+					# else move on to the next attribute
+					ERASE_COUNT_VALUE=`$smartctl -A \$disk | awk '/Erase_Count/ { print $4 }'`
+					ERASE_COUNT_THRESH=`$smartctl -A \$disk | awk '/Erase_Count/ { print $6 }'`
+					ERASE_COUNT_RAW=`$smartctl -A \$disk | awk '/Erase_Count/ { print $10 }'`
+					if [ -n "$ERASE_COUNT_RAW" ] 
+					then
+						# This calculation is a wild guess.  On the one drive I've tested so far,
+						# awk column $10 gives what appears may be percentage consumed (1%), whereas
+						# the threshhold was at 100, and the value was at 199.  It's not clear yet
+						# which numbers mean what.  The tester drive is JMicron family.
+						ERASE_PERCENT=`echo 100 - $ERASE_COUNT_RAW | bc`
+						if [ $ERASE_PERCENT -gt 50 ]
+						then
+							echo $YELLOW"SSD $disk appears to be at $ERASE_PERCENT% life." $RESET
+						else
+							echo $PURPLE"Warning:  $disk appears to be at $ERASE_PERCENT% life" $RESET
+							FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
+							CONTINUE_TESTING=1 #false
+						fi 
+					fi
+				#fi
+				
+				# Generic log testing
+				#if [ $CONTINUE_TESTING -eq 0 -o $IGNORE_SMART_ERRORS -eq 0 ]
+				#then
+					$smartctl -l error $disk > /dev/null
+					
+					# do a binary AND against the seventh bit in the return value of the 
+					# last command--per smartctl man page
+					SMARTSTAT=$(($? & 64))
+		
+					if [ $SMARTSTAT -gt 0 ]
+					then
+						POWER_ON_HOURS=`$smartctl -A \$disk | awk '/Power_On_Hours/ { print $10 }'`
+						DAYS=`echo $POWER_ON_HOURS / 24 | bc`
+						HOURS=`echo "$POWER_ON_HOURS - 24 * $DAYS" | bc`
+						echo $YELLOW"Warning:  Found errors in SMART log for $disk at the following times:" $RESET
+						echo "    Current power on hours: $POWER_ON_HOURS ($DAYS days + $HOURS hours)"
+						$smartctl -l error $disk | awk '/occurred at disk power-on lifetime/ { print "        " $0 }'
+						FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
+						CONTINUE_TESTING=1 #false
+					fi
+				#fi
+			fi
+		fi
+	done
+}

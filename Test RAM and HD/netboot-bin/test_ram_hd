@@ -1,0 +1,18 @@
+#!/bin/sh
+
+#touch /var/netboot/tmp_write_test
+
+#if [ -e /var/netboot/tmp_write_test ]
+#then
+#	rm /var/netboot/tmp_write_test
+#else
+#	mount -uw / >& /dev/null
+#	mount_network_share >& /dev/null
+#fi
+
+source /var/netboot/bin/test_ram_hd_source
+
+run_tests
+show_hd_test_summary
+follow_ram_test
+show_hd_test_summary
