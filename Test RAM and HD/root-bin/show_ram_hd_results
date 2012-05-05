@@ -6,7 +6,7 @@ export SERIALNUMBER="`system_profiler SPHardwareDataType | awk '/r \(system\)/ {
 
 if [ ! -d /var/netboot/Tests/$SERIALNUMBER ]
 then
-	if [ `df -l | awk '/\/$/ { if ( $1 ~ /dev/disk ) print "yes"; else print "no"; }'` -eq "yes" ]
+	if [ "`df -l | awk '/\/$/ { if ( $1 ~ /dev/disk ) print \"yes\"; else print \"no\"; }'`" = "yes" ]
 	then
 		echo "Couldn't find any local logs for a machine with this serial number:  $SERIALNUMBER"
 	else
