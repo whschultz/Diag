@@ -294,6 +294,7 @@ print failed;\
 	done
 }
 
+
 run_all_smart_tests () {
 	RED=`tput setaf 1`
 	YELLOW=`tput setaf 3`
@@ -466,3 +467,307 @@ run_all_smart_tests () {
 		fi
 	done
 }
+
+
+
+show_connected_hds () {
+
+# borrow applejack's scripts to start relevant services
+startServices >& /dev/null
+
+system_profiler -listDataTypes | egrep 'ATA|SCSI' | xargs system_profiler | awk '/BSD Name.*disk[0-9]+$/ { print $3 }' | xargs -n 1 diskutil info | awk '/Ejectable/ { if ( $2 == "No" ) print identifier; } /Device Identifier/ { identifier=$3; }'
+}
+
+
+#############################################################################
+# Below here is mostly copied and pasted from applejack 1.6
+# applejack's "loggit" function has been replaced with just "echo"
+
+#	Let's find out Mac OS X version in order to start the right services.
+OSV=`sw_vers 2>/dev/null | awk '/ProductVersion/ { print $2 }'`
+
+ANIMAL=`echo $OSV | cut -f 2 -d . `
+
+if [ -x /usr/bin/awk ];then AWK='/usr/bin/awk';else AWK='awk';BADENV=1;fi
+if [ -x /usr/sbin/bless ];then BLESS='/usr/sbin/bless';else BLESS='bless';BADENV=1;fi
+if [ -x /bin/chmod ];then CHMOD='/bin/chmod';else CHMOD='chmod';BADENV=1;fi
+if [ -x /usr/sbin/chown ];then CHOWN='/usr/sbin/chown';else CHOWN='chown';BADENV=1;fi
+if [ -x /bin/cp ];then CP='/bin/cp';else CP='cp';BADENV=1;fi
+if [ -x /usr/bin/egrep ];then EGREP='/usr/bin/egrep';else EGREP='egrep';BADENV=1;fi
+if [ -x /usr/bin/file ];then FILE='/usr/bin/file';else FILE='file';BADENV=1;fi
+if [ -x /usr/bin/grep ];then GREP='/usr/bin/grep';else GREP='grep';BADENV=1;fi
+if [ -x /usr/libexec/kextd ];then KEXTD='/usr/libexec/kextd';else KEXTD='kextd';BADENV=1;fi
+if [ -x /bin/ln ];then LN='/bin/ln';else LN='ln';BADENV=1;fi
+if [ -x /bin/ls ];then LS='/bin/ls';else LS='ls';BADENV=1;fi
+if [ -x /bin/mkdir ];then MKDIR='/bin/mkdir';else MKDIR='mkdir';BADENV=1;fi
+if [ -x /sbin/mount ];then MOUNT='/sbin/mount';else MOUNT='mount';BADENV=1;fi
+if [ -x /bin/mv ];then MV='/bin/mv';else MV='mv';BADENV=1;fi
+if [ -x /usr/bin/dscl ];then DSCL='/usr/bin/dscl';DSCLav=1;else DSCL='dscl';DSCLav=0;fi
+if [ -x /usr/bin/plutil ];then PLUTIL='/usr/bin/plutil';else PLUTIL='plutil';BADENV=1;fi
+if [ -x /bin/rm ];then RM='/bin/rm';else RM='rm';BADENV=1;fi
+if [ -x /bin/rmdir ];then RMDIR='/bin/rmdir';else RMDIR='rmdir';BADENV=1;fi
+if [ -x /usr/bin/sed ];then SED='/usr/bin/sed';else	SED='sed';BADENV=1;fi
+if [ -x /usr/bin/tee ];then TEE='/usr/bin/tee';else	SED='tee';BADENV=1;fi
+
+LOGFILE="/private/var/log/AppleJack.log"	#	Where does the AppleJack log go?
+
+EX_OK=0 # successful termination
+EX_ERR=1 # general error
+
+
+# Not implemented, but a way to test mounting in real time rather than with 
+# a status variable such as WRITEABLEROOT
+# Snow Leopard: when mounted read-only, mount reports: 
+# root_device on / (hfs, local, read-only, journaled)
+# when mounted read/write, it reports:
+# /dev/disk0s2 on / (hfs, local, journaled) 
+# of course, one can always try to touch a file, like during the init of this 
+# script.
+function writable() {
+	mount | while read -r line; do
+		hit=`echo $line | grep 'root_device' | grep 'read-only'`
+		if [ ! -z "$hit" ];then
+			loggit "root disk mounted read only"
+			return $EX_ERR
+		fi
+	done
+	loggit "root disk mounted read+write"
+	return $EX_OK
+}
+
+function mountem() {
+	if [ -z "$WRITEABLEROOT" ];then
+		WRITEABLEROOT=0
+	elif [ $WRITEABLEROOT -eq 1 ];then
+		echo "Root file system already mounted. Continue."
+		return 0
+	fi
+	echo "Let's mount the startup file system for write access..."
+	if $MOUNT -vuw /;then
+		WRITEABLEROOT=1
+		if [ -f /etc/fstab ]; then
+			echo "Mounting local filesystems in fstab"
+			$MOUNT -vat nonfs
+		fi
+		echo "Done."
+		echo -n "Checking for /tmp directory: "
+		if [ -d "/tmp" ];then
+			echo "/tmp directory exists."
+		else
+			echo "${bW}/tmp directory does not exist${eW}"
+			if [ ! -d "/private/tmp" ];then
+				echo "${bW}/private/tmp does not exist either${eW}"
+				echo -n "Creating /private/tmp: "
+				$MKDIR -v "/private/tmp" | $TEE -a "$LOGFILE"
+				echo -n "Setting correct permissions: "
+				$CHMOD -v 1777 "/private/tmp" | $TEE -a "$LOGFILE"
+			fi
+			echo -n "Creating symbolic link from /tmp to /private/tmp: "
+			$LN -sv "/private/tmp" "/tmp" | $TEE -a "$LOGFILE"
+			if [ -d "/tmp" ];then
+				echo "All set."
+				SANDBOX="/tmp"
+				cd "$SANDBOX"
+			else
+				echo "${bW}Could not create /tmp directory. Something seems to be wrong "
+				echo "with your file system. Proceed with caution${eW}"
+			fi
+		fi
+		echo "Done."
+	else
+		echo "${bE}Root file system could not be mounted. Script must quit.			  ${eE}"
+		exit $EX_OSERR
+	fi
+	echo ""
+	return 0
+}
+
+function services() {
+	if [ -z "$SERVICES" ];then
+		SERVICES=0	# Start assuming services have not been loaded
+	elif [ "$SERVICES" -eq 1 ];then
+		echo "- All supporting services appear to be loaded."
+		return 0	# return success: services have been started
+	fi
+	# otherwise, check
+	case "$ANIMAL" in
+		4) 	
+			cs="diskarbitrationd configd memberd notifyd securityd lookupd DirectoryService"
+			;;
+		5) 	
+			cs="launchd notifyd configd syslogd distnoted DirectoryService diskarbitrationd kdcmond KernelEventAgent securityd"
+			;;
+		6) 	
+			cs="launchd notifyd configd syslogd distnoted DirectoryService diskarbitrationd KernelEventAgent securityd"
+			;;
+	esac
+
+	pss=`ps -axco command`
+	m=0
+	ct=0
+	for c in $cs;do
+		let "ct=$ct+1"
+		for ps in $pss;do
+			if [ "$c" = "$ps" ];then
+				let "m=$m+1"
+				break
+			fi
+		done
+	done
+	if [ $ct -eq $m ];then
+		SERVICES=1
+		echo "- All supporting services appear to be loaded."
+		return $EX_OK	# return true
+	fi
+	echo "- All supporting services are not loaded."
+	return $EX_ERR	# return false
+}
+
+function startServices() {
+	if services; then
+		return 0
+	fi
+
+	# make sure file system is mounted for read/write access
+	mountem
+
+	case "$ANIMAL" in 
+		4 ) 
+			echo "Configuring minimal Tiger services..."
+			(
+				SafeBoot='-x'
+				export -n SafeBoot
+
+				# Create mach symbol file
+				sysctl -n kern.symfile
+				if [ -f /mach.sym ]; then
+					ln -sf /mach.sym /mach
+				else
+					ln -sf /mach_kernel /mach
+				fi
+
+				echo "Configuring kernel extensions for safe boot"
+				touch /private/tmp/.SafeBoot
+				# $KEXTD -x
+				# c=don't use repositories, -v 1 =quiet, print only errors
+				# x=run in safe boot mode
+				$KEXTD -c -v 1 -x
+
+				echo "Loading basic launchd services..."
+				(
+					launchctl load /System/Library/LaunchDaemons/com.apple.syslogd.plist
+					launchctl load /etc/mach_init.d/notifyd.plist
+					wait
+					syslog -c 0 -p
+					# throw syslog output away from the screen
+					syslog -x /dev/null >/dev/null
+					wait 
+					for plist in configd coreservicesd DirectoryService diskarbitrationd distnoted hdiejectd kuncd lookupd mds memberd notifyd scsid securityd translated; do
+						launchctl load /etc/mach_init.d/${plist}.plist > /dev/null 2>&1 &
+						wait
+					done
+					for plist in com.apple.KernelEventAgent com.apple.nibindd; do
+						launchctl load /System/Library/LaunchDaemons/${plist}.plist > /dev/null 2>&1 &
+						wait
+					done
+				) 2>&1>/dev/null &
+				wait
+			) 2>&1>/dev/null &
+			wait
+			;;
+		5 ) 
+			echo "Configuring minimal Leopard services..."
+			(
+				SafeBoot='-x'
+				export -n SafeBoot
+
+				echo "Configuring kernel extensions for safe boot"
+				touch /private/tmp/.SafeBoot
+
+				# launchd is handling kextd startup in Leopard
+				# but we can't configure it with the plist
+				# launchctl load /System/Library/LaunchDaemons/com.apple.kextd.plist
+				# $KEXTD -x
+				# c=don't use repositories, v 1 =quiet, print only errors
+				# x=run in safe boot mode
+				$KEXTD -c -v 1 -x
+
+				############################################################
+				# Many thanks to Steve Anthony for his substantial effort in
+				# figuring out the startup sequence for Leopard.
+				############################################################
+				echo "Loading basic launchd services..."
+				(
+					launchctl load /System/Library/LaunchDaemons/com.apple.notifyd.plist
+					launchctl load /System/Library/LaunchDaemons/com.apple.configd.plist
+					launchctl load /System/Library/LaunchDaemons/com.apple.syslogd.plist
+					wait
+					syslog -c 0 -p
+					# throw syslog output away from the screen
+					syslog -x /dev/null >/dev/null
+					wait 
+					for plist in  com.apple.coreservicesd com.apple.DirectoryServices com.apple.DirectoryServicesLocal com.apple.diskarbitrationd com.apple.kdcmond com.apple.distnoted com.apple.hdiejectd com.apple.notifyd com.apple.scsid com.apple.securityd com.apple.KernelEventAgent com.apple.installdb.system; do
+						launchctl load /System/Library/LaunchDaemons/${plist}.plist > /dev/null 2>&1 &
+						wait
+					done
+				) 2>&1>/dev/null &
+				wait
+			) 2>&1>/dev/null &
+			wait
+			;;
+		6 ) 
+			echo "Configuring minimal Snow Leopard services..."
+			(
+				# Probably going overboard here with the environment variable
+				# AND the flag, but I can't see the logic of how it's being read
+				# down the line, so playing it safe.
+				SafeBoot='-x'
+				export -n SafeBoot
+				
+				echo "Configuring kernel extensions for safe boot"
+				touch /private/tmp/.SafeBoot
+				# launchctl load /System/Library/LaunchDaemons/com.apple.kextd.plist
+				# launchd should be handling kextd startup in Leopard
+				# but we can't configure it with the plist
+				# c=don't use repositories, q=quiet, print only errors
+				# x=run in safe boot mode
+				$KEXTD -c -q -x
+				
+				############################################################
+				# Many thanks to Steve Anthony for his substantial effort in
+				# figuring out the startup sequence for Snow Leopard.
+				############################################################
+				echo "Loading basic launchd services..."
+				(
+					launchctl load /System/Library/LaunchDaemons/com.apple.notifyd.plist
+					launchctl load /System/Library/LaunchDaemons/com.apple.configd.plist
+					launchctl load /System/Library/LaunchDaemons/com.apple.syslogd.plist
+					wait
+					syslog -c 0 -p
+					# throw syslog output away from the screen
+					syslog -x /dev/null >/dev/null
+					wait 
+					for plist in  com.apple.kuncd com.apple.KernelEventAgent com.apple.distnoted com.apple.aslmanager com.apple.DirectoryServices com.apple.DirectoryServicesLocal com.apple.coreservicesd com.apple.diskmanagementd com.apple.securityd com.apple.diskarbitrationd com.apple.fseventsd; do
+						launchctl load /System/Library/LaunchDaemons/${plist}.plist > /dev/null 2>&1 &
+						wait
+					done
+				) 2>&1>/dev/null &
+				wait
+			) 2>&1>/dev/null &
+			wait
+			;;
+		* )
+			;;
+	esac
+	echo ""
+	echo "Waiting for services to start..."
+	echo ""
+	sleep 15
+#	echo "Done. -${exit_status}-"
+	echo "Done."
+	SERVICES=1
+	echo ""
+	echo ""
+	return
+}
+
