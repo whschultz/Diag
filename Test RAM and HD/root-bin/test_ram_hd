@@ -13,9 +13,11 @@ else
 	if [ "`df -l | awk '/\/$/ { if ( $1 ~ /dev/disk ) print \"yes\"; else print \"no\"; }'`" = "yes" ]
 	then
 		# Booted from a drive
+		echo "Booted from a tester drive.  Mounting rw..."
 		mount -uw /
 	else
 		# Netbooted
+		echo "Netbooted.  Connecting to network share..."
 		mount_network_share
 		mount -uw /
 	fi

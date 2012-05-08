@@ -11,6 +11,7 @@ then
 		echo "Couldn't find any local logs for a machine with this serial number:  $SERIALNUMBER"
 	else
 		# Netbooted
+		echo "Netbooted.  Connecting to network share..."
 		mount_network_share
 
 		if [ ! -d /var/netboot/Tests/$SERIALNUMBER ]
