@@ -301,13 +301,13 @@ run_all_smart_tests () {
 	PURPLE=`tput setaf 5`
 	RESET=`tput sgr0`
 
-	smartctl='/opt/local/sbin/smartctl'
+	SMARTCTL=/opt/local/sbin/smartctl
 
 	# Turn on SMART support for the first drive.
 	# Show health of first drive, even if it's good.
-	if ( $smartctl -s on -q errorsonly disk0 )
+	if ( $SMARTCTL -s on -q errorsonly disk0 )
 	then
-		$smartctl -H disk0
+		$SMARTCTL -H disk0
 	else
 		echo "Initial drive does not support SMART.  Note: USB and Firewire do not Support SMART."
 	fi
@@ -326,11 +326,11 @@ run_all_smart_tests () {
 		if [ -e $disk ]
 		then
 			# Try to turn on SMART, and check the tables if it's supported
-			if ( $smartctl -s on -q errorsonly $disk )
+			if ( $SMARTCTL -s on -q errorsonly $disk )
 			then
 				if [ $disk != /dev/disk0 ]
 				then
-					$smartctl -H -q errorsonly $disk
+					$SMARTCTL -H -q errorsonly $disk
 				fi
 				
 				#true
@@ -338,7 +338,7 @@ run_all_smart_tests () {
 				
 				# HDD-specific tests
 				
-				CURRENTPENDINGSECTORS=`$smartctl -A \$disk | awk '/Current_Pending_Sector/ { print $10 }'`
+				CURRENTPENDINGSECTORS=`$SMARTCTL -A \$disk | awk '/Current_Pending_Sector/ { print $10 }'`
 				
 				# if this attribute exists
 				if [ -n "$CURRENTPENDINGSECTORS" ] 
@@ -355,7 +355,7 @@ run_all_smart_tests () {
 				#if [ $CONTINUE_TESTING -eq 0 -o $IGNORE_SMART_ERRORS -eq 0 ]
 				#then
 					# else move on to the next attribute
-					OFFLINEUNC=`$smartctl -A \$disk | awk '/Offline_Uncorrectable/ { print $10 }'`
+					OFFLINEUNC=`$SMARTCTL -A \$disk | awk '/Offline_Uncorrectable/ { print $10 }'`
 					
 					# if this attribute exists
 					if [ -n "$OFFLINEUNC" ] 
@@ -373,7 +373,7 @@ run_all_smart_tests () {
 				#if [ $CONTINUE_TESTING -eq 0 -o $IGNORE_SMART_ERRORS -eq 0 ]
 				#then
 					# else move on to the next attribute
-					REALLOC=`$smartctl -A \$disk | awk '/Reallocated_Sector_Ct/ { print $10 }'`
+					REALLOC=`$SMARTCTL -A \$disk | awk '/Reallocated_Sector_Ct/ { print $10 }'`
 					if [ -n "$REALLOC" ] 
 					then
 						if [ $REALLOC -gt 0 ]
@@ -388,7 +388,7 @@ run_all_smart_tests () {
 				#if [ $CONTINUE_TESTING -eq 0 -o $IGNORE_SMART_ERRORS -eq 0 ]
 				#then
 					# else move on to the next attribute
-					REALLOC_EV=`$smartctl -A \$disk | awk '/Reallocated_Event_Count/ { print $10 }'`
+					REALLOC_EV=`$SMARTCTL -A \$disk | awk '/Reallocated_Event_Count/ { print $10 }'`
 					if [ -n "$REALLOC_EV" ] 
 					then
 						if [ $REALLOC_EV -gt 0 ]
@@ -406,7 +406,7 @@ run_all_smart_tests () {
 				#if [ $CONTINUE_TESTING -eq 0 -o $IGNORE_SMART_ERRORS -eq 0 ]
 				#then
 					# else move on to the next attribute
-					BAD_CLUSTER=`$smartctl -A \$disk | awk '/Bad_Cluster_Table_Count/ { print $10 }'`
+					BAD_CLUSTER=`$SMARTCTL -A \$disk | awk '/Bad_Cluster_Table_Count/ { print $10 }'`
 					if [ -n "$BAD_CLUSTER" ] 
 					then
 						if [ $BAD_CLUSTER -gt 0 ]
@@ -421,9 +421,9 @@ run_all_smart_tests () {
 				#if [ $CONTINUE_TESTING -eq 0 -o $IGNORE_SMART_ERRORS -eq 0 ]
 				#then
 					# else move on to the next attribute
-					ERASE_COUNT_VALUE=`$smartctl -A \$disk | awk '/Erase_Count/ { print $4 }'`
-					ERASE_COUNT_THRESH=`$smartctl -A \$disk | awk '/Erase_Count/ { print $6 }'`
-					ERASE_COUNT_RAW=`$smartctl -A \$disk | awk '/Erase_Count/ { print $10 }'`
+					ERASE_COUNT_VALUE=`$SMARTCTL -A \$disk | awk '/Erase_Count/ { print $4 }'`
+					ERASE_COUNT_THRESH=`$SMARTCTL -A \$disk | awk '/Erase_Count/ { print $6 }'`
+					ERASE_COUNT_RAW=`$SMARTCTL -A \$disk | awk '/Erase_Count/ { print $10 }'`
 					if [ -n "$ERASE_COUNT_RAW" ] 
 					then
 						# This calculation is a wild guess.  On the one drive I've tested so far,
@@ -445,7 +445,7 @@ run_all_smart_tests () {
 				# Generic log testing
 				#if [ $CONTINUE_TESTING -eq 0 -o $IGNORE_SMART_ERRORS -eq 0 ]
 				#then
-					$smartctl -l error $disk > /dev/null
+					$SMARTCTL -l error $disk > /dev/null
 					
 					# do a binary AND against the seventh bit in the return value of the 
 					# last command--per smartctl man page
@@ -453,12 +453,12 @@ run_all_smart_tests () {
 		
 					if [ $SMARTSTAT -gt 0 ]
 					then
-						POWER_ON_HOURS=`$smartctl -A \$disk | awk '/Power_On_Hours/ { print $10 }'`
+						POWER_ON_HOURS=`$SMARTCTL -A \$disk | awk '/Power_On_Hours/ { print $10 }'`
 						DAYS=`echo $POWER_ON_HOURS / 24 | bc`
 						HOURS=`echo "$POWER_ON_HOURS - 24 * $DAYS" | bc`
 						echo $YELLOW"Warning:  Found errors in SMART log for $disk at the following times:" $RESET
 						echo "    Current power on hours: $POWER_ON_HOURS ($DAYS days + $HOURS hours)"
-						$smartctl -l error $disk | awk '/occurred at disk power-on lifetime/ { print "        " $0 }'
+						$SMARTCTL -l error $disk | awk '/occurred at disk power-on lifetime/ { print "        " $0 }'
 						FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
 						CONTINUE_TESTING=1 #false
 					fi
