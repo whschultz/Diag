@@ -237,7 +237,7 @@ BEGIN {
 #   File System and Software
 #
 
-/jnl.*disk[0-9]+.*(close: journal .*, is invalid|only wrote.*of.*bytes to the journal|error)|kernel.*(ntfs|NTFS|hfs|msdosfs).*(corruption|[Ee]rr|[Ff]ailed|invalid|warning|can.t find (iNode|dir))/ {
+/jnl.*disk[0-9]+.*(close: journal .*, is invalid|only wrote.*of.*bytes to the journal|error)|kernel.*(ntfs|NTFS|hfs|msdosfs).*(corruption|[Ee]rr|[Ff]ailed|invalid|warning|can.t find (iNode|dir))|fseventsd.*could not open .*fseventsd\/fseventsd-uuid.* \(No such file or directory\)/ {
 	handle_error_row($0,"File system",YELLOW);
 	next;
 }
