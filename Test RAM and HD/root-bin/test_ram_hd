@@ -10,7 +10,7 @@ then
 	# If that succeeded, remove our test file
 	rm /var/netboot/tmp_write_test
 else
-	if [ "`df -l | awk '/\/$/ { if ( $1 ~ /dev/disk ) print \"yes\"; else print \"no\"; }'`" = "yes" ]
+	if [ "`df -l | awk '/\/$/ { if ( $1 ~ /\/dev\/disk/ ) print \"yes\"; else print \"no\"; }'`" = "yes" ]
 	then
 		# Booted from a drive
 		echo "Booted from a tester drive.  Mounting rw..."
