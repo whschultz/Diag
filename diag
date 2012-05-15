@@ -766,7 +766,7 @@ run_software_checks () {
 			check_users
 			check_preferences
 			check_offline_cache
-			check_flashback
+			#check_flashback
 		else
 			echo "Some software checks can't be run as a non-root user.  Run \"sudo -i\" to run these additional checks."
 		fi
@@ -783,7 +783,7 @@ run_software_checks_on_boot_volume () {
 		do_check_users "/"
 		do_check_preferences "/"
 		do_check_offline_cache "/"
-		do_check_flashback "/"
+		#do_check_flashback "/"
 	else
 		echo "Some software checks can't be run as a non-root user."
 	fi
@@ -1242,8 +1242,8 @@ diag () {
 							echo "    -- preferences checked"
 							do_check_offline_cache "$VOLUME"
 							echo "    -- eMail caches checked"
-							do_check_flashback "$VOLUME"
-							echo "    -- checked for FLASHBACK.G"
+							#do_check_flashback "$VOLUME"
+							#echo "    -- checked for FLASHBACK.G"
 						else
 							echo "Some software checks can't be run as a non-root user."
 						fi
@@ -1252,7 +1252,7 @@ diag () {
 						do_check_users "$VOLUME"
 						do_check_preferences "$VOLUME"
 						do_check_offline_cache "$VOLUME"
-						do_check_flashback "$VOLUME"
+						#do_check_flashback "$VOLUME"
 					fi
 				fi
 			done
@@ -1295,8 +1295,8 @@ diag () {
 						echo "    -- preferences checked"
 						do_check_offline_cache "$SPECIFIC_DRIVE_TO_CHECK"
 						echo "    -- eMail caches checked"
-						do_check_flashback "$SPECIFIC_DRIVE_TO_CHECK"
-						echo "    -- checked for FLASHBACK.G"
+						#do_check_flashback "$SPECIFIC_DRIVE_TO_CHECK"
+						#echo "    -- checked for FLASHBACK.G"
 					else
 						echo "Some software checks can't be run as a non-root user."
 					fi
@@ -1308,8 +1308,8 @@ diag () {
 					echo "    -- preferences checked"
 					do_check_offline_cache "$SPECIFIC_DRIVE_TO_CHECK"
 					echo "    -- eMail caches checked"
-					do_check_flashback "$SPECIFIC_DRIVE_TO_CHECK"
-					echo "    -- checked for FLASHBACK.G"
+					#do_check_flashback "$SPECIFIC_DRIVE_TO_CHECK"
+					#echo "    -- checked for FLASHBACK.G"
 				fi
 				
 				if [ $SHOW_LOGS_WHEN_DONE -eq 0 ]
