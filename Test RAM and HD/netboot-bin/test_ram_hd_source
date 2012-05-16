@@ -104,7 +104,10 @@ awk '/Found bad block/ { total=total+1; } \
 	if ( $2 < 100 ) \
 		print GREEN $0 RESET;\
 	else if ( $2 < 750 )\
+	{\
 		print YELLOW $0 RESET;\
+		slow_ish=slow_ish+$4;\
+	}\
 	else {\
 		print RED $0 RESET;\
 		slow=slow+$4;\
@@ -147,7 +150,10 @@ function handle_end_of_test(date) {\
 	} else {\
 		print "Hard drive has no bad blocks.";\
 	if ( slow > 0 )\
-		print RED"Hard drive has slow blocks and may not be trustworthy"RESET; }\
+		print RED"Hard drive has slow blocks and may not be trustworthy"RESET;\
+	if ( slow_ish > 99 )\
+		print YELLOW"Hard drive has a fair number of somewhat slow blocks and may not be trustworthy"RESET;\
+	}\
 	print PURPLE date RESET;\
 }' /var/netboot/Tests/$SERIALNUMBER/hd_test.log
 fi
