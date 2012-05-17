@@ -289,6 +289,7 @@ do_show_time_machine_info () {
 		BYTES_AVAILABLE_ON_BACKUP_DRIVE="`defaults read \"$1\"/var/db/.TimeMachine.Results BytesAvailable`"
 		BYTES_TO_COPY="`defaults read \"$1\"/var/db/.TimeMachine.Results BytesToCopy`"
 		PADDING="`defaults read \"$1\"/var/db/.TimeMachine.Results PaddedBytesRequired`"
+		IS_RUNNING="`defaults read \"$1\"/var/db/.TimeMachine.Results Running`"
 		
 		BYTES_NEEDED_TO_BACKUP="`echo $BYTES_TO_COPY + $PADDING | bc`"
 
@@ -296,6 +297,11 @@ do_show_time_machine_info () {
 		if [ $BYTES_NEEDED_TO_BACKUP -gt $BYTES_AVAILABLE_ON_BACKUP_DRIVE ]
 		then
 			echo $RED"There's not enough free space available on the Time Machine backup drive to complete a backup."$RESET
+		fi
+		
+		if [ $IS_RUNNING -ne 1 ]
+		then
+			echo $RED"Time machine is turned off."$RESET			
 		fi
 		
 		echo "            Latest Backup: $LATEST_COMPLETE_BACKUP"
