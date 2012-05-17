@@ -262,6 +262,50 @@ do_show_all_logs () {
 }
 
 
+show_time_machine_info () {
+	for VOLUME in /Volumes/*
+	do
+		if [ "$VOLUME" != "/Volumes/$BOOT_VOLUME_NAME" ]
+		then
+			do_show_time_machine_info "$VOLUME"
+		fi
+	done
+	
+	echo "    -- Time Machine records checked"
+}
+
+do_show_time_machine_info () {
+	RED=`tput setaf 1`
+	YELLOW=`tput setaf 3`
+	GREEN=`tput setaf 2`
+	RESET=`tput sgr0`
+
+	echo "        For volume $1:"
+
+	if [ -e "$1"/var/db/.TimeMachine.Results.plist ]
+	then
+		LATEST_COMPLETE_BACKUP="`defaults read \"$1\"/var/db/.TimeMachine.Results BACKUP_COMPLETED_DATE`"
+		OLDEST_COMPLETE_BACKUP="`defaults read \"$1\"/var/db/.TimeMachine.Results kCSBackupdOldestCompleteSnapshotDate`"
+		BYTES_AVAILABLE_ON_BACKUP_DRIVE="`defaults read \"$1\"/var/db/.TimeMachine.Results BytesAvailable`"
+		BYTES_TO_COPY="`defaults read \"$1\"/var/db/.TimeMachine.Results BytesToCopy`"
+		PADDING="`defaults read \"$1\"/var/db/.TimeMachine.Results PaddedBytesRequired`"
+		
+		BYTES_NEEDED_TO_BACKUP="`echo $BYTES_TO_COPY + $PADDING | bc`"
+
+		
+		if [ $BYTES_NEEDED_TO_BACKUP -gt $BYTES_AVAILABLE_ON_BACKUP_DRIVE ]
+		then
+			echo $RED"There's not enough free space available on the Time Machine backup drive to complete a backup."$RESET
+		fi
+		
+		echo "            Latest Backup: $LATEST_COMPLETE_BACKUP"
+		echo "            Oldest Backup: $OLDEST_COMPLETE_BACKUP"
+	else
+		echo $RED"            No master record of a Time Machine backup found."$RESET
+	fi
+}
+
+
 check_logs () {
 	for VOLUME in /Volumes/*
 	do
@@ -767,6 +811,7 @@ run_software_checks () {
 			check_preferences
 			check_offline_cache
 			#check_flashback
+			show_time_machine_info
 		else
 			echo "Some software checks can't be run as a non-root user.  Run \"sudo -i\" to run these additional checks."
 		fi
@@ -784,6 +829,7 @@ run_software_checks_on_boot_volume () {
 		do_check_preferences "/"
 		do_check_offline_cache "/"
 		#do_check_flashback "/"
+		do_show_time_machine_info "$VOLUME"
 	else
 		echo "Some software checks can't be run as a non-root user."
 	fi
@@ -1244,6 +1290,8 @@ diag () {
 							echo "    -- eMail caches checked"
 							#do_check_flashback "$VOLUME"
 							#echo "    -- checked for FLASHBACK.G"
+							do_show_time_machine_info "$VOLUME"
+							echo "    -- Time Machine records checked"
 						else
 							echo "Some software checks can't be run as a non-root user."
 						fi
@@ -1253,6 +1301,7 @@ diag () {
 						do_check_preferences "$VOLUME"
 						do_check_offline_cache "$VOLUME"
 						#do_check_flashback "$VOLUME"
+						do_show_time_machine_info "$VOLUME"
 					fi
 				fi
 			done
@@ -1297,6 +1346,8 @@ diag () {
 						echo "    -- eMail caches checked"
 						#do_check_flashback "$SPECIFIC_DRIVE_TO_CHECK"
 						#echo "    -- checked for FLASHBACK.G"
+						do_show_time_machine_info "$SPECIFIC_DRIVE_TO_CHECK"
+						echo "    -- Time Machine records checked"
 					else
 						echo "Some software checks can't be run as a non-root user."
 					fi
@@ -1310,6 +1361,8 @@ diag () {
 					echo "    -- eMail caches checked"
 					#do_check_flashback "$SPECIFIC_DRIVE_TO_CHECK"
 					#echo "    -- checked for FLASHBACK.G"
+					do_show_time_machine_info "$SPECIFIC_DRIVE_TO_CHECK"
+					echo "    -- Time Machine records checked"
 				fi
 				
 				if [ $SHOW_LOGS_WHEN_DONE -eq 0 ]
