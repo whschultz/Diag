@@ -11,7 +11,7 @@ then
 	rm /var/netboot/tmp_write_test
 else
 	MOUNT_FROM="$(ipconfig netbootoption shadow_mount_path 2>&1)"
-	if [ -n $MOUNT_FROM ]
+	if [ -n "$MOUNT_FROM" ]
 	then
 		# Booted from a drive
 		echo "Booted from a tester drive.  Mounting rw..."
