@@ -67,15 +67,7 @@ run_tests () {
 	
 	#cd /var/netboot/Tests/$SERIALNUMBER/
 	
-	if [ -e /var/netboot/Tests/$SERIALNUMBER/memtest.pid ]
-	then
-		kill -KILL `cat /var/netboot/Tests/$SERIALNUMBER/memtest.pid`
-		rm /var/netboot/Tests/$SERIALNUMBER/memtest.pid
-	fi
-	echo "" >> /var/netboot/Tests/$SERIALNUMBER/memtest.log
-	date >> /var/netboot/Tests/$SERIALNUMBER/memtest.log
-	/Applications/Rember.app/Contents/Resources/memtest all $MEMTESTLIMIT >> /var/netboot/Tests/$SERIALNUMBER/memtest.log 2>&1 &
-	jobs -l | awk '/memtest/ { print $2 }' > /var/netboot/Tests/$SERIALNUMBER/memtest.pid
+	test_ram
 	
 	echo "" >> /var/netboot/Tests/$SERIALNUMBER/hd_test.log
 	date >> /var/netboot/Tests/$SERIALNUMBER/hd_test.log
@@ -84,7 +76,27 @@ run_tests () {
 	
 	badblocks -m -v -e $HDBADBLOCKLIMIT /dev/rdisk0 1 >& /dev/null # spin up the drive and prep the first block
 	
-	badblocks -m -v -e $HDBADBLOCKLIMIT /dev/rdisk0 2>&1 | tee -a /var/netboot/Tests/$SERIALNUMBER/hd_test.log
+	badblocks -m -s -v -e $HDBADBLOCKLIMIT /dev/rdisk0 2>&1 | tee -a /var/netboot/Tests/$SERIALNUMBER/hd_test.log
+}
+
+test_ram () {
+	if [ -e /var/netboot/Tests/$SERIALNUMBER/memtest.pid ]
+	then
+		kill -KILL `cat /var/netboot/Tests/$SERIALNUMBER/memtest.pid`
+		rm /var/netboot/Tests/$SERIALNUMBER/memtest.pid
+	fi
+	echo "" >> /var/netboot/Tests/$SERIALNUMBER/memtest.log
+	date >> /var/netboot/Tests/$SERIALNUMBER/memtest.log
+	
+	if [ -e /opt/local/bin/memtester ]
+	then
+		AVAILABLE_RAM="`top -l 1 | awk '/PhysMem.*free/ { print $10 }'`"
+		/opt/local/bin/memtester $AVAILABLE_RAM $MEMTESTLIMIT >> /var/netboot/Tests/$SERIALNUMBER/memtest.log 2>&1 &
+	else
+		/Applications/Rember.app/Contents/Resources/memtest all $MEMTESTLIMIT >> /var/netboot/Tests/$SERIALNUMBER/memtest.log 2>&1 &
+	fi
+	
+	jobs -l | awk '/memtest/ { print $2 }' > /var/netboot/Tests/$SERIALNUMBER/memtest.pid
 }
 
 #tail -n 1000 -f memtest.log
@@ -161,9 +173,18 @@ fi
 show_limited_ram_test_summary () {
 if [ -e /var/netboot/Tests/$SERIALNUMBER/memtest.log ]
 then
-awk '/FAILURE/ { failed=failed+1; }\
+awk '/memtester/ {\
+	is_running_memtester=1;\
+}\
+/Memtest / {\
+	is_running_memtester=0;\
+}\
+/FAILURE/ { failed=failed+1; }\
 /Test sequence/ {\
 	current_test=$3;\
+}\
+/Loop [0-9]+\/[0-9]+/ {\
+	current_test=$2;\
 }\
 /All tests passed/ {\
 	current_test=current_test+1;\
@@ -184,7 +205,12 @@ function handle_end_of_test(date) {\
 	if ( failed > 0 )\
 		print RED"This machine failed memtest"RESET;\
 	else\
-		print GREEN"This machine passed "current_test-1" iterations of memtest"RESET;\
+	{\
+		if ( is_running_memtester > 0 ) \
+			print GREEN"This machine passed "current_test" iterations of memtester"RESET;\
+		else\
+			print GREEN"This machine passed "current_test-1" iterations of memtest"RESET;\
+	}\
 }' /var/netboot/Tests/$SERIALNUMBER/memtest.log
 fi
 }
@@ -192,9 +218,18 @@ fi
 show_ram_test_summary () {
 if [ -e /var/netboot/Tests/$SERIALNUMBER/memtest.log ]
 then
-awk '/FAILURE/ { failed=failed+1; }\
+awk '/memtester/ {\
+	is_running_memtester=1;\
+}\
+/Memtest / {\
+	is_running_memtester=0;\
+}\
+/FAILURE/ { failed=failed+1; }\
 /Test sequence/ {\
 	current_test=$3;\
+}\
+/Loop [0-9]+\/[0-9]+/ {\
+	current_test=$2;\
 }\
 /All tests passed/ {\
 	current_test=current_test+1;\
@@ -220,7 +255,12 @@ function handle_end_of_test(date) {\
 	if ( failed > 0 )\
 		print RED"This machine failed memtest"RESET;\
 	else\
-		print GREEN"This machine passed "current_test-1" iterations of memtest"RESET;\
+	{\
+		if ( is_running_memtester > 0 ) \
+			print GREEN"This machine passed "current_test" iterations of memtester"RESET;\
+		else\
+			print GREEN"This machine passed "current_test-1" iterations of memtest"RESET;\
+	}\
 	print PURPLE date RESET;\
 }' /var/netboot/Tests/$SERIALNUMBER/memtest.log
 fi
