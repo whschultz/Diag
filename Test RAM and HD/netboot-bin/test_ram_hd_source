@@ -90,13 +90,33 @@ test_ram () {
 	
 	if [ -e /opt/local/bin/memtester ]
 	then
-		AVAILABLE_RAM="`top -l 1 | awk '/PhysMem.*free/ { print $10 }'`"
-		/opt/local/bin/memtester $AVAILABLE_RAM $MEMTESTLIMIT >> /var/netboot/Tests/$SERIALNUMBER/memtest.log 2>&1 &
+		AVAILABLE_RAM="`vm_stat | awk '/Pages free/ { print $3\"*4096\" }' | bc1444175872`"
+		RAM_TO_LEAVE_FREE="0"
+		RAM_TO_ASK_FOR="`echo $AVAILABLE_RAM-$RAM_TO_LEAVE_FREE | bc`"
+		/opt/local/bin/memtester $RAM_TO_ASK_FOR $MEMTESTLIMIT >> /var/netboot/Tests/$SERIALNUMBER/memtest.log 2>&1 &
+		jobs -l | awk '/memtest/ { print $2 }' > /var/netboot/Tests/$SERIALNUMBER/memtest.pid
+
+		sleep 1
+		
+		while [ -n "`grep 'trying mlock' /var/netboot/Tests/$SERIALNUMBER/memtest.log | tail -n 2 | grep 'reducing'`" ]
+		do
+			kill -KILL `cat /var/netboot/Tests/$SERIALNUMBER/memtest.pid`
+			rm /var/netboot/Tests/$SERIALNUMBER/memtest.pid
+			
+			AVAILABLE_RAM="`vm_stat | awk '/Pages free/ { print $3\"*4096\" }' | bc1444175872`"
+			# Increase by 1MB instead of by 4kB, which is what would happen automatically
+			RAM_TO_LEAVE_FREE="`echo $RAM_TO_LEAVE_FREE+1048576 | bc`"
+			RAM_TO_ASK_FOR="`echo $AVAILABLE_RAM-$RAM_TO_LEAVE_FREE | bc`"
+			/opt/local/bin/memtester $RAM_TO_ASK_FOR $MEMTESTLIMIT >> /var/netboot/Tests/$SERIALNUMBER/memtest.log 2>&1 &
+			jobs -l | awk '/memtest/ { print $2 }' > /var/netboot/Tests/$SERIALNUMBER/memtest.pid
+
+			sleep 1
+		done
 	else
 		/Applications/Rember.app/Contents/Resources/memtest all $MEMTESTLIMIT >> /var/netboot/Tests/$SERIALNUMBER/memtest.log 2>&1 &
+		jobs -l | awk '/memtest/ { print $2 }' > /var/netboot/Tests/$SERIALNUMBER/memtest.pid
 	fi
 	
-	jobs -l | awk '/memtest/ { print $2 }' > /var/netboot/Tests/$SERIALNUMBER/memtest.pid
 }
 
 #tail -n 1000 -f memtest.log
