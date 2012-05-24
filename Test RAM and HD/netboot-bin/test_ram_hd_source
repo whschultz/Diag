@@ -300,6 +300,16 @@ failed=0;\
 /Test sequence/ {\
 current_test=$3;\
 }\
+/Loop 1\/[0-9]+/ {\
+failed=0;\
+}\
+/Loop [0-9]+\/[0-9]+/ {\
+	split($2,a,\"/\");\
+	current_test=a[1];\
+}\
+/Done\./ {\
+current_test=current_test+1;\
+}\
 /All tests passed/ {\
 current_test=current_test+1;\
 }\
@@ -308,6 +318,9 @@ END { print current_test; }' /var/netboot/Tests/$SERIALNUMBER/memtest.log`"
 	CURRENTFAILURECOUNT="`awk '/FAILURE/ { failed=failed+1; }\
 BEGIN { failed=0; }\
 /Test sequence 1 of/ {\
+failed=0;\
+}\
+/Loop 1\/[0-9]+/ {\
 failed=0;\
 }\
 END {\
@@ -343,11 +356,24 @@ current_test=$3;\
 /All tests passed/ {\
 current_test=current_test+1;\
 }\
+/Loop 1\/[0-9]+/ {\
+failed=0;\
+}\
+/Loop [0-9]+\/[0-9]+/ {\
+	split($2,a,\"/\");\
+	current_test=a[1];\
+}\
+/Done\./ {\
+current_test=current_test+1;\
+}\
 END { print current_test; }' /var/netboot/Tests/$SERIALNUMBER/memtest.log`"
 		
 		CURRENTFAILURECOUNT="`awk '/FAILURE/ { failed=failed+1; }\
 BEGIN { failed=0; }\
 /Test sequence 1 of/ {\
+failed=0;\
+}\
+/Loop 1\/[0-9]+/ {\
 failed=0;\
 }\
 END {\
