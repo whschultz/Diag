@@ -102,7 +102,7 @@ Usage: diag [-h] [-l] [-a] [-i] [-s] [-v <volume mount point>] [-d <sound|graphi
         run software tests on only this mount point
 
     -d <sound|graphics|tm|usb|mm|b2m|font|full|swap|unplug|2nd>
-        when showing log files, don\t show these errors:
+        when showing log files, don't show these errors:
         sound:     Sound errors
         graphics:  Graphics card errors
         tm:        Time Machine errors
