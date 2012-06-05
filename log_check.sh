@@ -176,7 +176,7 @@ BEGIN {
 	next;
 }
 
-/(USBF|IOUSBMassStorageClass|USB Notification).*(timing|is having trouble enumerating|was not able to enumerate|The device is still unresponsive|bit not sticking|data length is 0 in enqueueData|Device.*is violating.*the USB Specification|has caused an overcurrent condition|returning error|reported error|could not find the hub device)/ {
+/(USBF|IOUSBMassStorageClass|USB Notification).*(timing|is having trouble enumerating|was not able to enumerate|The device is still unresponsive|bit not sticking|data length is 0 in enqueueData|Device.*is violating.*the USB Specification|has caused an overcurrent condition|returning error|reported error|could not find the hub device|IOUSBCompositeDriver.*GetFullConfigDescriptor.*returned NULL)/ {
 	if ( ignore_usb_errors == 0 )
 		handle_error_row($0,"USB",YELLOW);
 	else
