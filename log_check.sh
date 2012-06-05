@@ -201,7 +201,10 @@ BEGIN {
 	# by author from context clues in the logs.
 	list_of_time_machine_explanations[11]=RED"Copy failed"RESET;
 	list_of_time_machine_explanations[18]=RED"Couldn't find backup (e.g. backup found but doesn't match this computer, or couldn't connect to server)"RESET;
-	list_of_time_machine_explanations[19]=YELLOW"Error while resolving alias to backup target"RESET;
+	list_of_time_machine_explanations[19]=YELLOW"Error while resolving alias to backup target; mount failed"RESET;
+	list_of_time_machine_explanations[20]=YELLOW"Failed to create image"RESET;
+	list_of_time_machine_explanations[21]=YELLOW"Failed to attach image"RESET;
+	list_of_time_machine_explanations[26]=YELLOW"Disk full; changing Time Machine settings on destination failed; writing to backup destination failed"RESET;
 	list_of_time_machine_explanations[27]=YELLOW"Stopped backup because the backup volume was ejected"RESET;
 	list_of_time_machine_explanations[29]=YELLOW"Authentication failed"RESET;
 	list_of_time_machine_explanations[31]=PURPLE"Failed to mount disk image (e.g. disk image may already be mounted.  restart base station.)"RESET;
