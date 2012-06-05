@@ -242,6 +242,11 @@ BEGIN {
 	next;
 }
 
+/fseventsd.*: (Events arrived for .* after an unmount request|check_vol_last_mod_time:XXX failed to get mount time)/ {
+	handle_error_row($0,"Failure to eject, possible bad external drive",PURPLE);
+	next;
+}
+
 /\/dev\/rdisk.*Volume check failed/ {
 	handle_error_row($0,"Corrupt File system",RED);
 	next;
