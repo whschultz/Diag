@@ -302,6 +302,34 @@ END {
 	next;
 }
 
+
+/DirectoryService.*Failed Authentication.*for username/ {
+	if ( ignore_login_failures == 0 )
+	{
+		login_failure_count++;
+		split($0,reason_row,": ");
+		account_login_failure[reason_row[3]]++;
+		handle_error_row($0,"Failed login attempt",PURPLE);
+	}
+	else
+		handle_ignored_error($0,"Failed login attempt",YELLOW);
+	next;
+}
+
+END {
+# this END statement gives the summary from the above Time Machines failure causes
+	if ( login_failure_count > 0 ) {		
+		print "Failed user logins\ncount\t: name";
+		for (name in account_login_failure) {
+			print account_login_failure[name] "\t: " name ;
+		}
+
+		print ""
+	}
+}
+
+
+
 /mDNSResponder.*(Double NAT|Failed to obtain NAT port mapping|Registration of record.*members\.mac\.com\..*failed)/ {
 	if ( ignore_back_to_my_mac_errors == 0 )
 		handle_error_row($0,"Back to My Mac",YELLOW);
