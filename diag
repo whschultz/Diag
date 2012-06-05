@@ -399,11 +399,39 @@ do_check_preferences () {
 #			echo "-----------" $USER "-----------"
 
 			find "$USER"/Library/Preferences -name '*.plist' -print0 | xargs -n 1 -0 /usr/bin/plutil -s
-		fi
+		fi		
+	done
+}
+
+
+check_flashback () {
+	if [ $LOGNAME = "root" ]
+	then
+		for VOLUME in /Volumes/*
+		do
+			if [ "$VOLUME" != "/Volumes/$BOOT_VOLUME_NAME" ]
+			then
+				do_check_flashback "$VOLUME"
+			fi
+		done
 		
+		echo "    -- checked for FLASHBACK.G"
+	else
+		echo "Note: Can't check for FLASHBACK.G as non-root user.  Run \"sudo -i\" to check for FLASHBACK.G."
+	fi
+}
+
+
+do_check_flashback () {
+	RED=`tput setaf 1`
+	RESET=`tput sgr0`
+	
+	
+	for USER in "$1"/Users/*
+	do		
 		if [ -e "$USER"/.MacOSX/environment.plist ]
 		then
-			if [ $(defaults read $USER/.MacOSX/environment.plist DYLD_INSERT_LIBRARIES 2> /dev/null) ]
+			if [ $(defaults read "$USER"/.MacOSX/environment.plist DYLD_INSERT_LIBRARIES 2> /dev/null) ]
 			then
 				if [ $(dirname `defaults read $USER/.MacOSX/environment.plist DYLD_INSERT_LIBRARIES 2> /dev/null`) = "/Users/Shared" ]
 				then
@@ -417,6 +445,22 @@ do_check_preferences () {
 			fi
 		fi
 	done
+
+	mdfind -onlyin "$1" -interpret ".app" | egrep '^.*(Safari|Firefox|Chrome)\.app$' | awk '// {\
+		"tput setaf 1" | getline RED;\
+		"tput setaf 2" | getline GREEN;\
+		"tput sgr0" | getline RESET;\
+		print "Testing browser " $0;\
+		command_for_plist_test="defaults read \""$0"\"/Contents/Info.plist LSEnvironment 2> /dev/null";\
+		command_for_plist_test | getline LIBRARIES;\
+		close(command_for_plist_test);\
+		if ( result != "" ) \
+		{\
+			print RED"WARNING:  BROWSER AT " $0 "MAY BE INFECTED WITH FLASHBACK.G!!!  See http://www.f-secure.com/v-descs/trojan-downloader_osx_flashback_i.shtml for more info."RESET;\
+		}\
+		else\
+			print GREEN"clean"RESET; \
+		}'
 }
 
 
@@ -711,6 +755,7 @@ run_software_checks () {
 			check_users
 			check_preferences
 			check_offline_cache
+			check_flashback
 		else
 			echo "Some software checks can't be run as a non-root user.  Run \"sudo -i\" to run these additional checks."
 		fi
@@ -727,6 +772,7 @@ run_software_checks_on_boot_volume () {
 		do_check_users "/"
 		do_check_preferences "/"
 		do_check_offline_cache "/"
+		do_check_flashback "/"
 	else
 		echo "Some software checks can't be run as a non-root user."
 	fi
@@ -1181,6 +1227,8 @@ diag () {
 							echo "    -- preferences checked"
 							do_check_offline_cache "$VOLUME"
 							echo "    -- eMail caches checked"
+							do_check_flashback "$VOLUME"
+							echo "    -- checked for FLASHBACK.G"
 						else
 							echo "Some software checks can't be run as a non-root user."
 						fi
@@ -1189,6 +1237,7 @@ diag () {
 						do_check_users "$VOLUME"
 						do_check_preferences "$VOLUME"
 						do_check_offline_cache "$VOLUME"
+						do_check_flashback "$VOLUME"
 					fi
 				fi
 			done
@@ -1231,6 +1280,8 @@ diag () {
 						echo "    -- preferences checked"
 						do_check_offline_cache "$SPECIFIC_DRIVE_TO_CHECK"
 						echo "    -- eMail caches checked"
+						do_check_flashback "$SPECIFIC_DRIVE_TO_CHECK"
+						echo "    -- checked for FLASHBACK.G"
 					else
 						echo "Some software checks can't be run as a non-root user."
 					fi
@@ -1242,6 +1293,8 @@ diag () {
 					echo "    -- preferences checked"
 					do_check_offline_cache "$SPECIFIC_DRIVE_TO_CHECK"
 					echo "    -- eMail caches checked"
+					do_check_flashback "$SPECIFIC_DRIVE_TO_CHECK"
+					echo "    -- checked for FLASHBACK.G"
 				fi
 				
 				if [ $SHOW_LOGS_WHEN_DONE -eq 0 ]
