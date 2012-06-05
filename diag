@@ -283,7 +283,12 @@ do_check_logs () {
 			MODEL_IDENTIFIER=0
 		fi
 		
-		do_show_all_logs "$1" | log_check.sh -v MODEL_IDENTIFIER="$MODEL_IDENTIFIER"
+		if [ "`which log_check.sh`" ]
+		then
+			do_show_all_logs "$1" | log_check.sh -v MODEL_IDENTIFIER="$MODEL_IDENTIFIER"
+		else
+			do_show_all_logs "$1" | ./log_check.sh -v MODEL_IDENTIFIER="$MODEL_IDENTIFIER"
+		fi
 #	else
 #		echo "    -- Folder does not exist, so no log files to check:  $1/var/log"
 	fi
@@ -315,7 +320,13 @@ do_show_errors () {
 			MODEL_IDENTIFIER=0
 		fi
 
-		do_show_all_logs "$1" | log_check.sh -v print_all_errors=1 -v MODEL_IDENTIFIER="$MODEL_IDENTIFIER" $SHOW_SHUTDOWN_CAUSES $DONT_SHOW_SECONDARY_IO $DONT_SHOW_UNPLUG $DONT_SHOW_SWAP_FULL $DONT_SHOW_HD_FULL $DONT_SHOW_FONT $DONT_SHOW_B2M $DONT_SHOW_MM $DONT_SHOW_AFSC $DONT_SHOW_SOUND $DONT_SHOW_GRAPHICS $DONT_SHOW_TM $DONT_SHOW_USB
+		if [ "`which log_check.sh`" ]
+		then
+			do_show_all_logs "$1" | log_check.sh -v print_all_errors=1 -v MODEL_IDENTIFIER="$MODEL_IDENTIFIER" $SHOW_SHUTDOWN_CAUSES $DONT_SHOW_SECONDARY_IO $DONT_SHOW_UNPLUG $DONT_SHOW_SWAP_FULL $DONT_SHOW_HD_FULL $DONT_SHOW_FONT $DONT_SHOW_B2M $DONT_SHOW_MM $DONT_SHOW_AFSC $DONT_SHOW_SOUND $DONT_SHOW_GRAPHICS $DONT_SHOW_TM $DONT_SHOW_USB
+		else
+			do_show_all_logs "$1" | ./log_check.sh -v print_all_errors=1 -v MODEL_IDENTIFIER="$MODEL_IDENTIFIER" $SHOW_SHUTDOWN_CAUSES $DONT_SHOW_SECONDARY_IO $DONT_SHOW_UNPLUG $DONT_SHOW_SWAP_FULL $DONT_SHOW_HD_FULL $DONT_SHOW_FONT $DONT_SHOW_B2M $DONT_SHOW_MM $DONT_SHOW_AFSC $DONT_SHOW_SOUND $DONT_SHOW_GRAPHICS $DONT_SHOW_TM $DONT_SHOW_USB
+
+		fi
 
 #	else
 #		echo "    -- Folder does not exist, so no log files to show:  $1/var/log"
