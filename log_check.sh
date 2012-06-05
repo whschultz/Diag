@@ -418,13 +418,15 @@ END {
 	next;
 }
 
-/AppleYukon2.*(HardwareNotResponding|hardware is not responding)/ {
-	if ( ignore_ethernet_errors == 0 )
-		handle_error_row($0,"Ethernet Hardware",RED);
-	else
-		handle_ignored_error($0,"Ethernet Hardware",RED);
-	next;
-}
+# This appears to be a normal sleep/wake message.  The ethernet/airport is put to sleep as the
+# machine goes to sleep.
+#/AppleYukon2.*(HardwareNotResponding|hardware is not responding)/ {
+#	if ( ignore_ethernet_errors == 0 )
+#		handle_error_row($0,"Ethernet Hardware",RED);
+#	else
+#		handle_ignored_error($0,"Ethernet Hardware",RED);
+#	next;
+#}
 
 
 
