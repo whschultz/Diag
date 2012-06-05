@@ -840,6 +840,60 @@ run_software_checks_on_boot_volume () {
 }
 
 
+
+find_ppc_apps () {
+	for VOLUME in /Volumes/*
+	do
+		if [ "$VOLUME" != "/Volumes/$BOOT_VOLUME_NAME" ]
+		then
+			do_find_ppc_apps "$VOLUME"
+		fi
+	done
+	
+	echo "    -- Checked for apps that can't run under Lion"
+}
+
+do_find_ppc_apps () {
+	if [ -e "$1"/Applications ]
+	then
+		find "$1"/Applications -regex ".*\.app/Contents/Info\.plist"  | awk '// {\
+			command_for_bundle="defaults read \""$0"\" CFBundleExecutable";\
+			command_for_bundle | getline BUNDLE_EXECUTABLE;\
+			close(command_for_bundle);\
+			command_for_dirname="dirname \""$0"\"";\
+			command_for_dirname | getline PATH;\
+			close(command_for_dirname);\
+			print PATH"/MacOS/"BUNDLE_EXECUTABLE;\
+			next;\
+		}' | sed -E "s/([ \"'])/"'\\\1/g' | xargs -n 1 -J % file % | awk '// { split($0,half,":"); \
+			split(half[2],a," ");\
+			if ( a[2] == "universal" || a[3] == "universal" || a[2] == "shell" || a[3] == "script" )\
+				next;\
+			split(half[1],b,"\(");\
+			app_name=b[1];\
+			if ( app_name != previous_app_binary )\
+			{\
+				if ( app_binaries[previous_app_binary] == 0 )\
+					print "PowerPC only app:  "previous_app_binary;\
+				app_binaries[app_name]=0;\
+			}\
+			if ( a[3] == "i386" || a[3] == "x86_64" || a[4] == "i386" || a[4] == "x86_64" )\
+			{\
+				app_binaries[app_name]=1;\
+			}\
+			previous_app_binary=app_name;\
+		}\
+		END {if ( previous_app_binary != 0 && app_binaries[previous_app_binary] == 0 )\
+				{\
+					print $0;\
+					print "PowerPC only app:  "previous_app_binary;\
+				}\
+			}'
+	fi
+}
+
+
+
 check_users () {
 	if [ $LOGNAME = "root" ]
 	then
