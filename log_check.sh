@@ -124,6 +124,14 @@ $0 ~ disk_IO_error_regexp {
 	next;
 }
 
+/Burn to.*media in.*failed/ {
+	if ( ignore_multimedia_errors == 0 )
+		handle_error_row($0,"Multimedia (burn failed)",RED);
+	else
+		handle_ignored_error($0,"Multimedia (burn failed)",RED);
+	next;
+}
+
 
 BEGIN {
 	multimedia_limit=1;
