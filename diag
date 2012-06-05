@@ -531,6 +531,8 @@ run_all_SMART_tests () {
 				#true
 				CONTINUE_TESTING=0
 				
+				# HDD-specific tests
+				
 				CURRENTPENDINGSECTORS=`smartctl -A \$disk | awk '/Current_Pending_Sector/ { print $10 }'`
 				
 				# if this attribute exists
@@ -593,6 +595,9 @@ run_all_SMART_tests () {
 					fi
 				fi
 
+				# SSD-specific tests
+				# This looks like a decent resource:  http://crystalmark.info/software/CrystalDiskInfo/manual-en/HealthStatus.html
+				# More info will be needed on how to treat these as failures.
 				if [ $CONTINUE_TESTING -eq 0 -o $IGNORE_SMART_ERRORS -eq 0 ]
 				then
 					# else move on to the next attribute
@@ -619,7 +624,7 @@ run_all_SMART_tests () {
 						# This calculation is a wild guess.  On the one drive I've tested so far,
 						# awk column $10 gives what appears may be percentage consumed (1%), whereas
 						# the threshhold was at 100, and the value was at 199.  It's not clear yet
-						# which numbers mean what.
+						# which numbers mean what.  The tester drive is JMicron family.
 						ERASE_PERCENT=`echo 100 - $ERASE_COUNT_RAW | bc`
 						if [ $ERASE_PERCENT -gt 50 ]
 						then
@@ -632,6 +637,7 @@ run_all_SMART_tests () {
 					fi
 				fi
 				
+				# Generic log testing
 				if [ $CONTINUE_TESTING -eq 0 -o $IGNORE_SMART_ERRORS -eq 0 ]
 				then
 					smartctl -l error $disk > /dev/null
