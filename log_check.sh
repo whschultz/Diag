@@ -455,6 +455,12 @@ END {
 	next;
 }
 
+/airportd.*Error: failed to snag beacon/ {
+# This appears to be a non-error.  Putting this line here causing the entry to be skipped.
+# It will not match the next expression.
+	next;
+}
+
 /(SystemUIServer|System Preferences).*Error joining|(Apple80211|airportd).*([Ee]rror|failed|bailing)/ {
 	handle_error_row($0,"Airport",PURPLE);
 	next;
