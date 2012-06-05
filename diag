@@ -383,6 +383,9 @@ check_preferences () {
 do_check_preferences () {
 #	echo "-----------" $1 "-----------"
 
+	RED=`tput setaf 1`
+	RESET=`tput sgr0`
+
 	if [ -d "$1"/Library/Preferences/ ]
 	then
 		find "$1"/Library/Preferences -name '*.plist' -print0 | xargs -n 1 -0 /usr/bin/plutil -s
@@ -396,6 +399,17 @@ do_check_preferences () {
 #			echo "-----------" $USER "-----------"
 
 			find "$USER"/Library/Preferences -name '*.plist' -print0 | xargs -n 1 -0 /usr/bin/plutil -s
+		fi
+		
+		if [ -e "$USER"/.MacOSX/environment.plist ]
+		then
+			if [ $(dirname `defaults read /Volumes/Macintosh\ HD/Users/johnpierce/.MacOSX/environment.plist DYLD_INSERT_LIBRARIES`) = "/Users/Shared" ]
+			then
+				echo $RED"WARNING:  USER AT " $USER "IS LIKELY INFECTED WITH FLASHBACK.G"
+				echo "DELETE THE FOLLOWING FILES:"
+				echo $USER"/.MacOSX/environment.plist"
+				echo $1"$(defaults read /Volumes/Macintosh\ HD/Users/johnpierce/.MacOSX/environment.plist DYLD_INSERT_LIBRARIES)"$RESET
+			fi
 		fi
 	done
 }
