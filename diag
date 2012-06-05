@@ -478,7 +478,7 @@ do_show_errors () {
 			MODEL_IDENTIFIER=0
 		fi
 
-		do_show_all_logs "$1" | log_check.sh -v print_all_errors=1 -v MODEL_IDENTIFIER="$MODEL_IDENTIFIER" $DONT_SHOW_SECONDARY_IO $DONT_SHOW_UNPLUG $DONT_SHOW_SWAP_FULL $DONT_SHOW_HD_FULL $DONT_SHOW_FONT $DONT_SHOW_B2M $DONT_SHOW_MM $DONT_SHOW_AFSC $DONT_SHOW_SOUND $DONT_SHOW_GRAPHICS $DONT_SHOW_TM $DONT_SHOW_USB
+		do_show_all_logs "$1" | log_check.sh -v print_all_errors=1 -v MODEL_IDENTIFIER="$MODEL_IDENTIFIER" $SHOW_SHUTDOWN_CAUSES $DONT_SHOW_SECONDARY_IO $DONT_SHOW_UNPLUG $DONT_SHOW_SWAP_FULL $DONT_SHOW_HD_FULL $DONT_SHOW_FONT $DONT_SHOW_B2M $DONT_SHOW_MM $DONT_SHOW_AFSC $DONT_SHOW_SOUND $DONT_SHOW_GRAPHICS $DONT_SHOW_TM $DONT_SHOW_USB
 
 #	else
 #		echo "    -- Folder does not exist, so no log files to show:  $1/var/log"
@@ -1019,12 +1019,12 @@ diag () {
 		check_power_cord_wattage
 	fi
 
-	args=`getopt hlaisv:d:m: $*`
+	args=`getopt hlaisuv:d:m: $*`
 	# you should not use `getopt abo: "$@"` since that would parse
 	# the arguments differently from what the set command below does.
 	if [ $? != 0 ]
 	then
-		echo 'Usage: diag [-h] [-l] [-a] [-i] [-s] [-m <model identifier>] [-v <volume mount point>] [-d <sound|graphics|tm|usb|mm|b2m|font|full|swap|unplug|2nd>]'
+		echo 'Usage: diag [-h] [-l] [-a] [-i] [-s] [-u] [-m <model identifier>] [-v <volume mount point>] [-d <sound|graphics|tm|usb|mm|b2m|font|full|swap|unplug|2nd>]'
 		echo '    run "diag -h" for more information'
 		return
 	fi
@@ -1097,11 +1097,14 @@ diag () {
 			-m)
 				MODEL_IDENTIFIER="$2"; shift;
 				shift;;				
+			-u)
+				SHOW_SHUTDOWN_CAUSES="-v print_all_shutdown_causes=1"
+				shift;;
 			-i)
 				IGNORE_SMART_ERRORS=0 # true
 				shift;;
 			-h)
-				echo 'Usage: diag [-h] [-l] [-a] [-i] [-s] [-v <volume mount point>] [-d <sound|graphics|tm|usb|mm|b2m|font|full|swap|unplug|2nd>]'
+				echo 'Usage: diag [-h] [-l] [-a] [-i] [-s] [-v <volume mount point>] [-m <model identifier] [-u] [-d <sound|graphics|tm|usb|mm|b2m|font|full|swap|unplug|2nd>]'
 				echo '    By default, run SMART tests on all attached drives.  If SMART tests are'
 				echo '    not available, run software tests on all mounted volumes.  Otherwise,'
 				echo '    run software tests on all mounted volumes other than the boot volume.'
@@ -1121,6 +1124,8 @@ diag () {
 				echo '        run software tests on only this mount point'
 				echo '    -m <model identifier>'
 				echo '        specify the model identifier to be used when interpreting shutdown codes'
+				echo '    -u'
+				echo "        show all shutdown causes, including those that aren't errors"
 				echo ''
 				echo '    -d <sound|graphics|tm|usb|mm|b2m|font|full|swap|unplug|2nd>'
 				echo "        when showing log files, don't show these errors:"

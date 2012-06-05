@@ -82,7 +82,7 @@ show_boot_volume_errors
 Whether your run the script directly or call the "diag" function that is provided in the environment
 when the script is sourced, the following usage applies equally.
 
-Usage: diag [-h] [-l] [-a] [-i] [-s] [-v <volume mount point>] [-d <sound|graphics|tm|usb|mm|b2m|font|full|swap|unplug|2nd>]
+Usage: diag [-h] [-l] [-a] [-i] [-s] [-v <volume mount point>] [-m <model identifier] [-u] [-d <sound|graphics|tm|usb|mm|b2m|font|full|swap|unplug|2nd>]
     By default, run SMART tests on all attached drives.  If SMART tests are
     not available, run software tests on all mounted volumes.  Otherwise,
     run software tests on all mounted volumes other than the boot volume.
@@ -100,6 +100,10 @@ Usage: diag [-h] [-l] [-a] [-i] [-s] [-v <volume mount point>] [-d <sound|graphi
         run only SMART tests and then quit
     -v <volume mount point>
         run software tests on only this mount point
+    -m <model identifier>
+        specify the model identifier to be used when interpreting shutdown codes
+    -u
+        show all shutdown causes, including those that aren't errors
 
     -d <sound|graphics|tm|usb|mm|b2m|font|full|swap|unplug|2nd>
         when showing log files, don't show these errors:
