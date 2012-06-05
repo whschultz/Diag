@@ -722,12 +722,17 @@ do_find_ppc_apps () {
 			next;\
 		}' | sed -E "s/([ \"'])/"'\\\1/g' | xargs -n 1 -J % file % | awk '// { split($0,half,":"); \
 			split(half[2],a," ");\
-			if ( a[2] == "universal" || a[3] == "universal" || a[2] == "shell" || a[3] == "script" || ( a[1] == "cannot" && a[2] == "open" ) )\
+			if ( a[2] == "universal" || a[3] == "universal" || a[2] == "shell" || a[3] == "script" )\
 				next;\
 			split(half[1],b,"\(");\
 			app_name=b[1];\
 			if ( app_name != previous_app_binary )\
 			{\
+				if ( a[1] == "cannot" && a[2] == "open" )\
+				{\
+					print "App is invalid:    "app_name;\
+					next;\
+				}\
 				if ( app_binaries[previous_app_binary] == 0 )\
 					print "PowerPC only app:  "previous_app_binary;\
 				app_binaries[app_name]=0;\
