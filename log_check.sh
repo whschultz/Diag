@@ -306,7 +306,7 @@ END {
 }
 
 /kernel.*bad busy count/ {
-	handle_error_row($0,"Bad Busy",YELLOW);
+	handle_error_row($0,"Bad Busy",PURPLE);
 	next;
 }
 
