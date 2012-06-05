@@ -124,7 +124,7 @@ $0 ~ disk_IO_error_regexp {
 	next;
 }
 
-/Burn to.*media in.*failed/ {
+/Burn to.*media in.*failed|SerialATAPI device reconfiguration did not complete successfully|SerialATAPI Terminating due to unrecoverable Reset error - drive has stopped responding/ {
 	if ( ignore_multimedia_errors == 0 )
 		handle_error_row($0,"Multimedia (burn failed)",RED);
 	else
