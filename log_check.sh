@@ -223,6 +223,13 @@ BEGIN {
 	next;
 }
 
+/This computer’s Internet connection appears to be offline/ {
+	if ( ignore_internet_errors == 0 )
+		handle_error_row($0,"Internet offline",YELLOW);
+	else
+		handle_ignored_error($0,"Internet offline",YELLOW);
+	next;
+}
 
 
 ####################################################################
