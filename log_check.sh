@@ -143,7 +143,7 @@ BEGIN {
 	next;
 }
 
-/(timed out waiting for IOKit to quiesce|AppleSMUsendMISC: FAILURE -- TIMEOUT EXCEEDED on GPIO|FireWire.*no valid selfIDs.*after bus reset)/ {
+/(timed out waiting for IOKit to quiesce|AppleSMUsendMISC: FAILURE -- TIMEOUT EXCEEDED on GPIO)/ {
 	handle_error_row($0,"IOKit",RED);
 	next;
 }
@@ -158,7 +158,7 @@ BEGIN {
 	}
 }
 
-/FireWire.*bus resets in last.*minutes/ {
+/FireWire.*(bus resets in last.*minutes|no valid selfIDs.*after bus reset)/ {
 	handle_error_row($0,"FireWire",YELLOW);
 	next;
 }
