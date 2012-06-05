@@ -280,7 +280,7 @@ BEGIN {
 END {
 # this END statement gives the summary from the above Time Machines failure causes
 	if ( time_machine_error_count > 0 ) {		
-		print "Summary of Time Machine errors encountered\ncode\t: count\t: description";
+		print "Summary of Time Machine errors encountered in system logs\ncode\t: count\t: description";
 		for (reason in time_machine_failure_reasons) {
 			print reason "\t: " time_machine_failure_reasons[reason] "\t: " list_of_time_machine_explanations[reason];
 		}
@@ -298,9 +298,9 @@ END {
 	else
 	{
 		if ( time_machine_error_count > 0 )
-			print RED"No successful Time Machine backups found."RESET
+			print RED"No record of a successful Time Machine backups found in system.log.  See results of other test for more info."RESET
 		else
-			print YELLOW"No Time Machine backups found."RESET
+			print YELLOW"No record of Time Machine backups found in system.log.  See results of other test for more info."RESET
 	}
 
 	print ""
