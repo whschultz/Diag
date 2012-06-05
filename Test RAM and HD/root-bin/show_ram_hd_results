@@ -1,0 +1,14 @@
+#!/bin/sh
+
+
+#source /var/root/bin/test_ram_hd_source
+
+if [ ! -d /var/netboot/Tests/$SERIALNUMBER ]
+then
+	mount_network_share >& /dev/null
+fi
+
+#show_hd_test_summary
+#show_ram_test_summary
+
+/var/netboot/bin/show_ram_hd_results

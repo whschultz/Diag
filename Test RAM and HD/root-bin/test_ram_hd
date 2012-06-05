@@ -1,0 +1,23 @@
+#!/bin/sh
+
+touch /var/netboot/tmp_write_test
+
+if [ -e /var/netboot/tmp_write_test ]
+then
+	rm /var/netboot/tmp_write_test
+else
+	# If this script is going on a netboot image, remove the following one line
+	mount -uw /
+	
+	# This won't do much of anything if not netbooted
+	mount_network_share
+fi
+
+/var/netboot/bin/test_ram_hd
+
+#source /var/netboot/bin/test_ram_hd_source
+
+#run_tests
+#show_hd_test_summary
+#follow_ram_test
+#show_hd_test_summary
