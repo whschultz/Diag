@@ -171,6 +171,11 @@ BEGIN {
 	next; # keep this inside the "if" statement
 }
 
+/InterfaceNamer.*Bluetooth Module/ {
+	handle_error_row($0,"IOKit - Bluetooth",RED);
+	next; # keep this inside the "if" statement
+}
+
 /InterfaceNamer/ {
 	if ( lines_since_error==0 )
 	{
