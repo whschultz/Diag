@@ -176,6 +176,15 @@ BEGIN {
 	next;
 }
 
+/AppleRAID.*(has been marked offline|(read|copy) failed)/ {
+	if ( ignore_usb_errors == 0 )
+		handle_error_row($0,"RAID",RED);
+	else
+		handle_ignored_error($0,"RAID",RED);
+	next;
+}
+
+
 
 ####################################################################
 #
