@@ -812,12 +812,16 @@ do_check_users () {
 
 	if [ -d "$1"/var/db/dslocal ]
 	then
+		USER_COUNT=0
+		REAL_USER_COUNT=0;
 		for PLIST in "$1"/var/db/dslocal/nodes/Default/users/*.plist
 		do
+			USER_COUNT=$(($USER_COUNT+1))
 			USER=`basename "$PLIST" .plist`
 			USER_ID="`defaults read \"$1\"/var/db/dslocal/nodes/Default/users/$USER uid | sed -E 's/([^0-9-]*(([0-9]|-)*).*)/\2/g' | egrep '[0-9]+'`"
 			if [ "$USER_ID" -gt "499" ]
 			then
+				REAL_USER_COUNT=$(($REAL_USER_COUNT+1))
 				USERS_HOME="`defaults read \"$1\"/var/db/dslocal/nodes/Default/users/$USER home | awk '/\"/ { split($0,a,\"\\"\"); print a[2]; }'`"
 				#echo "$USER_ID  $USER  $USERS_HOME"
 				if [ \( ! -d "$USERS_HOME" \) -a \( ! -d "$1""$USERS_HOME" \) ]
@@ -826,16 +830,29 @@ do_check_users () {
 				fi
 			fi
 		done
+		if [ $REAL_USER_COUNT -eq 0 ]
+		then
+			if [ $USER_COUNT -eq 0 ]
+			then
+				echo $RED"There are no users, system or human, on volume \"$1\"!  OpenDirectory is likely corrupt."$RESET
+			else
+				echo $YELLOW"There are no human users on volume \"$1\""$RESET
+			fi
+		fi
 	else
 		if [ -d "$1"/var/db/netinfo ]
 		then
 			if [ "`which nicl`" ]
 			then
+				USER_COUNT=0
+				REAL_USER_COUNT=0;
 				for USER in `nicl -raw "$1"/var/db/netinfo/local.nidb -list /users/ | awk '// { print $2 }'`
 				do
+					USER_COUNT=$(($USER_COUNT+1))
 					USER_ID=`nicl -raw "$1"/var/db/netinfo/local.nidb -read /users/$USER uid | awk '// { print $2 }'`
 					if [ "$USER_ID" -gt "499" ]
 					then
+						REAL_USER_COUNT=$(($REAL_USER_COUNT+1))
 						USERS_HOME="`nicl -raw \"$1\"/var/db/netinfo/local.nidb -read /users/$USER home | awk '// { print $2 }'`"
 						if [ \( ! -d "$USERS_HOME" \) -a \( ! -d "$1""$USERS_HOME" \) ]
 						then
@@ -843,6 +860,15 @@ do_check_users () {
 						fi
 					fi
 				done
+				if [ $REAL_USER_COUNT -eq 0 ]
+				then
+					if [ $USER_COUNT -eq 0 ]
+					then
+						echo $RED"There are no users, system or human, on volume \"$1\"!  NetInfo database is likely corrupt."$RESET
+					else
+						echo $YELLOW"There are no human users on volume \"$1\""$RESET
+					fi
+				fi
 			else
 				echo $YELLOW"Can't test pre-10.5 users from a system running 10.5 or later.  NetIfo is not available.  Volume:  \"$1\""$RESET
 			fi
