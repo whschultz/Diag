@@ -1,60 +1,18 @@
-This diagnostic script is intended to parse system log files for potential known errors.  It's not
-intended to tell you what's failing on your machine; it's intended to point you in the right
-direction.  Having these errors in your logs doesn't gaurantee that you have a hardware problem, or
-even that you have a problem at all, but it could.  Additionally, the script is intended to be
-installed on a known-good diagnostic copy of the operating system (e.g. a netboot image), and as
-such, by default, it skips the boot volume, checking all other mounted volumes.  Also, it's been
-tested on PowerPC and Intel Macs running 10.4 and later.
+This diagnostic script is intended to parse system log files for potential known errors.  It's not intended to tell you what's failing on your machine; it's intended to point you in the right direction.  Having these errors in your logs doesn't gaurantee that you have a hardware problem, or even that you have a problem at all, but it could.  Additionally, the script is intended to be installed on a known-good diagnostic copy of the operating system (e.g. a netboot image), and as such, by default, it skips the boot volume, checking all other mounted volumes.  Also, it's been tested on PowerPC and Intel Macs running 10.4 and later.
 
-First thing it does is check the SMART status of all attached drives.  This requires smartmontools
-to be installed.  If any of the attached drives fail this test, the diagnostic script stops.
-Current pending sectors, reallocated sectors, or any existing errors in the SMART log will trigger
-this.  The vast majority of tools that test the SMART status of drives (e.g. Disk Utility,
-Disk Warrior, etc...) will only say a drive is failing if it's beyond recovery.  If any of these
-errors show up, you should immediately backup your drive and consider replacing it.  You can
-can continue past these errors with the '-i' flag.
+First thing it does is check the SMART status of all attached drives.  This requires smartmontools to be installed.  If any of the attached drives fail this test, the diagnostic script stops. Current pending sectors, reallocated sectors, or any existing errors in the SMART log will trigger this.  The vast majority of tools that test the SMART status of drives (e.g. Disk Utility, Disk Warrior, etc...) will only say a drive is failing if it's beyond recovery.  If any of these errors show up, you should immediately backup your drive and consider replacing it.  You can can continue past these errors with the '-i' flag.
 
-Next, diag runs a separate awk script against the contents of /var/log/system.log and
-/var/log/kernel.log, including all archived copies inside of /var/log.  Various types of errors and
-details are counted, and a summary of the counts is given at the end.  The colors given are
-somewhat arbitrary, but are intended to give somewhat an idea of the severity of the specific
-errors.  (For example:  red errors are almost always indicative of a real and serious problem.
-Anything else has the possibility of being benign.  Note that USB errors appear to be rather
-ubiquitous, and it's not yet clear if all of them are real.)  In addition to the existence of
-various errors, a few specific types of messages are currently being parsed and counted separately.
-Time Machine errors, for example, are being counted, and a few of the error codes are explained.
-Additionally, the SMU and SMC tells the OS why the machine was shut down or why it went to sleep.
-The explanations of some of these codes vary based on the model of the machine, so this is taken
-into account in order to explain what these codes mean.  Some of these codes come from Apple's
-service manuals, though this information appears not to be available for most models.  Color codes
-for these are a bit clearer.  Normal text is indicative of a code that is normal.  Yellow is
-indicative of a code that could be normal but also comes up in certain error cases (or in cases
-where the severity is not clear).  Red is indicative of a potentially serious issue (e.g. something
-is overheating).
+Next, diag runs a separate awk script against the contents of /var/log/system.log and /var/log/kernel.log, including all archived copies inside of /var/log.  Various types of errors and details are counted, and a summary of the counts is given at the end.  The colors given are somewhat arbitrary, but are intended to give somewhat an idea of the severity of the specific errors.  (For example:  red errors are almost always indicative of a real and serious problem. Anything else has the possibility of being benign.  Note that USB errors appear to be rather ubiquitous, and it's not yet clear if all of them are real.)  In addition to the existence of various errors, a few specific types of messages are currently being parsed and counted separately. Time Machine errors, for example, are being counted, and a few of the error codes are explained. Additionally, the SMU and SMC tells the OS why the machine was shut down or why it went to sleep. The explanations of some of these codes vary based on the model of the machine, so this is taken into account in order to explain what these codes mean.  Some of these codes come from Apple's service manuals, though this information appears not to be available for most models.  Color codes for these are a bit clearer.  Normal text is indicative of a code that is normal.  Yellow is indicative of a code that could be normal but also comes up in certain error cases (or in cases where the severity is not clear).  Red is indicative of a potentially serious issue (e.g. something is overheating).
 
-In addition to the basic logs in /var/log, the script also looks for panic reports, counting them.
-If the "-l" flag is passed to show the errors in context, then the likely relevant portions of the
-panic logs will be printed out with the most useful information highlighted (e.g. kernel loadable
-modules in backtrace).
+In addition to the basic logs in /var/log, the script also looks for panic reports, counting them. If the "-l" flag is passed to show the errors in context, then the likely relevant portions of the panic logs will be printed out with the most useful information highlighted (e.g. kernel loadable modules in backtrace).
 
-After the logs are checked, the script next moves on to preferences files.  It scans plist files in
-the various Library/Preferences locations, checking to make sure they are valid.  Problematic files
-are listed off, but nothing is done to them.  Root access is needed for this.
+After the logs are checked, the script next moves on to preferences files.  It scans plist files in the various Library/Preferences locations, checking to make sure they are valid.  Problematic files are listed off, but nothing is done to them.  Root access is needed for this.
 
-Lastly, the script checks for the existence of a known issue in Apple Mail.  If the user tries to
-send an email message that's too big through an IMAP account, the message fails to send, but the
-user is never given an error message.  The email is stored in a hidden OfflineCache, and from this
-point forward, the account fails both to send and receive messages.  On top of this, the mail
-program over and over again creates a copy of this message until the hard drive is full.  Again,
-the script doesn't change anything or delete anything, but it will notify you if it suspects this
-issue may be occurring.  The solution is to delete the large email(s) from the OfflineCache folder.
+Lastly, the script checks for the existence of a known issue in Apple Mail.  If the user tries to send an email message that's too big through an IMAP account, the message fails to send, but the user is never given an error message.  The email is stored in a hidden OfflineCache, and from this point forward, the account fails both to send and receive messages.  On top of this, the mail program over and over again creates a copy of this message until the hard drive is full.  Again, the script doesn't change anything or delete anything, but it will notify you if it suspects this issue may be occurring.  The solution is to delete the large email(s) from the OfflineCache folder.
 
 
 
-The diag script can either be sourced, or it can be run directly.  The script can tell the
-difference, and it behaves differently based on how it is used.  There are numerous functions
-inside the script, and these can all be used in the environment.  Below is an incomplete list of
-some of the provided functionality.
+The diag script can either be sourced, or it can be run directly.  The script can tell the difference, and it behaves differently based on how it is used.  There are numerous functions inside the script, and these can all be used in the environment.  Below is an incomplete list of some of the provided functionality.
 
 
 
@@ -79,8 +37,7 @@ show_boot_volume_errors
     them.  Again, recommend piping into less.
 
 
-Whether your run the script directly or call the "diag" function that is provided in the environment
-when the script is sourced, the following usage applies equally.
+Whether your run the script directly or call the "diag" function that is provided in the environment when the script is sourced, the following usage applies equally.
 
 Usage: diag [-h] [-l] [-a] [-i] [-s] [-v <volume mount point>] [-m <model identifier] [-u] [-d <sound|graphics|tm|usb|mm|b2m|font|full|swap|unplug|2nd>]
     By default, run SMART tests on all attached drives.  If SMART tests are
