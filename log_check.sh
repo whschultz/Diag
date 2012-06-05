@@ -328,7 +328,7 @@ END {
 	}
 }
 
-/Allocator race detected: transaction is not verified for/ {
+/Allocator race detected: transaction is not verified for|hardware didn't idle, giving up/ {
 	if ( ignore_potential_hang == 0 )
 		handle_error_row($0,"Potential Hang",PURPLE);
 	else
