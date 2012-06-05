@@ -879,7 +879,7 @@ diag () {
 				echo '        run software tests on only this mount point'
 				echo ''
 				echo '    -d <sound|graphics|tm|usb|mm|b2m|font|full|swap|unplug|2nd>'
-				echo '        when showing log files, don\'t show these errors:'
+				echo "        when showing log files, don't show these errors:"
 				echo '        sound:     Sound errors'
 				echo '        graphics:  Graphics card errors'
 				echo '        tm:        Time Machine errors'
