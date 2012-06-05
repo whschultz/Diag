@@ -441,7 +441,11 @@ do_check_logs () {
 	if [ -e "$1"/var/log ]
 	then
 		echo "----------- Checking logs on mounted volume: " $1 " -----------"
-
+		if [ ! "$MODEL_IDENTIFIER" ]
+		then
+			MODEL_IDENTIFIER=0
+		fi
+		
 		do_show_all_logs "$1" | log_check.sh -v MODEL_IDENTIFIER="$MODEL_IDENTIFIER"
 #	else
 #		echo "    -- Folder does not exist, so no log files to check:  $1/var/log"
@@ -468,6 +472,11 @@ do_show_errors () {
 	if [ -e "$1"/var/log ]
 	then
 		echo "----------- Showing errors in logs on volume: " $1 " -----------"
+
+		if [ ! "$MODEL_IDENTIFIER" ]
+		then
+			MODEL_IDENTIFIER=0
+		fi
 
 		do_show_all_logs "$1" | log_check.sh -v print_all_errors=1 -v MODEL_IDENTIFIER="$MODEL_IDENTIFIER" $DONT_SHOW_SECONDARY_IO $DONT_SHOW_UNPLUG $DONT_SHOW_SWAP_FULL $DONT_SHOW_HD_FULL $DONT_SHOW_FONT $DONT_SHOW_B2M $DONT_SHOW_MM $DONT_SHOW_AFSC $DONT_SHOW_SOUND $DONT_SHOW_GRAPHICS $DONT_SHOW_TM $DONT_SHOW_USB
 
