@@ -184,6 +184,14 @@ BEGIN {
 	next;
 }
 
+/The USB device .* may have caused a wake by being disconnected/ {
+	if ( ignore_usb_errors == 0 )
+		handle_error_row($0,"USB Disconnect",YELLOW);
+	else
+		handle_ignored_error($0,"USB Disconnect",YELLOW);
+	next;
+}
+
 /(AppleUSBMultitouchDebug|AppleUSBMultitouchDriver).*(packet checksum is incorrect|returning error|reported error)/ {
 	if ( ignore_usb_errors == 0 )
 		handle_error_row($0,"Trackpad",PURPLE);
