@@ -20,6 +20,17 @@ else
 		echo "Netbooted.  Connecting to network share..."
 		mount_network_share
 		mount -uw /
+		
+		while [ "`df -l | awk '/\/private\/var\/netboot$/ { if ( $1 ~ /^afp/ ) print \"yes\"; else print \"no\"; }'`" = "yes" ]
+		do
+			if [ "`df -l | awk '/\/private\/var\/netboot$/ { if ( $1 ~ /\/dev\/disk/ ) print \"yes\"; else print \"no\"; }'`" = "yes" ]
+			then
+				echo "Failed to mount netboot volume.  Script can't run properly."
+			else
+				echo "Waiting for netboot volume to finish mounting..."
+				sleep 1
+			fi
+		done
 	fi
 fi
 
