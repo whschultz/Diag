@@ -7,7 +7,7 @@ export SERIALNUMBER="`system_profiler SPHardwareDataType | awk '/r \(system\)/ {
 if [ ! -d /var/netboot/Tests/$SERIALNUMBER ]
 then
 	MOUNT_FROM="$(ipconfig netbootoption shadow_mount_path 2>&1)"
-	if [ -n "$MOUNT_FROM" ]
+	if [ -z "$MOUNT_FROM" ]
 	then
 		echo "Couldn't find any local logs for a machine with this serial number:  $SERIALNUMBER"
 	else
