@@ -7,6 +7,9 @@
 # survive a reboot.  Furthermore, if the script needs updating, the netboot image does not
 # need to be recreated.
 
+# Required software:  e2fsprogs plus this patch to badblocks:  http://sourceforge.net/tracker/?func=detail&aid=3411576&group_id=2406&atid=302406
+# smartmontools
+
 
 TERM=xterm-color
 
