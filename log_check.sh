@@ -357,6 +357,14 @@ END {
 	next;
 }
 
+/unable to determine UUID for host/ {
+	if ( ignore_uuid_errors == 0 )
+		handle_error_row($0,"No UUID",RED);
+	else
+		handle_ignored_error($0,"No UUID",RED);
+	next;
+}
+
 /fontd.*(problematic|Error|[Ff]ailed)/ {
 	if ( ignore_font_errors == 0 )
 		handle_error_row($0,"Font",YELLOW);
