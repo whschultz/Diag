@@ -191,7 +191,7 @@ BEGIN {
 	next;
 }
 
-/(USBF|IOUSBMassStorageClass|USB Notification).*(timing|is having trouble enumerating|was not able to enumerate|The device is still unresponsive|bit not sticking|data length is 0 in enqueueData|Device.*is violating.*the USB Specification|has caused an overcurrent condition|returning error|reported error|could not find the hub device|IOUSBCompositeDriver.*GetFullConfigDescriptor.*returned NULL)/ {
+/(USBF|IOUSBMassStorageClass|USB Notification).*(timing|is having trouble enumerating|was not able to enumerate|The device is still unresponsive|bit not sticking|data length is 0 in enqueueData|Device.*is violating.*the USB Specification|has caused an overcurrent condition|returning error|reported error|could not find the hub device|IOUSBCompositeDriver.*GetFullConfigDescriptor.*returned NULL|about to terminate a busy device|expected port to be suspended for conversion, but it is not)/ {
 	if ( ignore_usb_errors == 0 )
 		handle_error_row($0,"USB",YELLOW);
 	else
@@ -207,7 +207,7 @@ BEGIN {
 	next;
 }
 
-/(AppleUSBMultitouchDebug|AppleUSBMultitouchDriver).*(packet checksum is incorrect|returning error|reported error|returned (an )?error)/ {
+/(AppleUSBMultitouchDebug|AppleUSBMultitouchDriver).*(packet checksum is incorrect|returning error|reported error|returned (an )?error|not in path binary mode)/ {
 	if ( ignore_usb_errors == 0 )
 		handle_error_row($0,"Trackpad",PURPLE);
 	else
@@ -237,7 +237,7 @@ BEGIN {
 #   File System and Software
 #
 
-/jnl.*disk[0-9]+.*(close: journal .*, is invalid|only wrote.*of.*bytes to the journal|error)|kernel.*(ntfs|NTFS|hfs|msdosfs).*(corruption|[Ee]rr|[Ff]ailed|invalid|warning|can.t find (iNode|dir))|fseventsd.*could not open .*fseventsd\/fseventsd-uuid.* \(No such file or directory\)/ {
+/jnl.*disk[0-9]+.*(close: journal .*, is invalid|only wrote.*of.*bytes to the journal|error|do_jnl_io: strategy err)|kernel.*(ntfs|NTFS|hfs|msdosfs).*(corruption|[Ee]rr|[Ff]ailed|invalid|warning|can.t find (iNode|dir))|fseventsd.*could not open .*fseventsd\/fseventsd-uuid.* \(No such file or directory\)/ {
 	handle_error_row($0,"File system",YELLOW);
 	next;
 }
