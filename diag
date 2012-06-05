@@ -1044,7 +1044,7 @@ diag () {
 	# the arguments differently from what the set command below does.
 	if [ $? != 0 ]
 	then
-		echo 'Usage: diag [-h] [-l] [-a] [-i] [-s] [-u] [-m <model identifier>] [-v <volume mount point>] [-d <sound|graphics|tm|usb|mm|b2m|font|full|swap|unplug|2nd>]'
+		echo 'Usage: diag [-h] [-l] [-a] [-i] [-s] [-u] [-m <model identifier>] [-v <volume mount point>] [-d <sound|graphics|tm|usb|mm|b2m|font|full|swap|unplug|2nd|launchd>]'
 		echo '    run "diag -h" for more information'
 		return
 	fi
@@ -1127,7 +1127,7 @@ diag () {
 				IGNORE_SMART_ERRORS=0 # true
 				shift;;
 			-h)
-				echo 'Usage: diag [-h] [-l] [-a] [-i] [-s] [-v <volume mount point>] [-m <model identifier] [-u] [-d <sound|graphics|tm|usb|mm|b2m|font|full|swap|unplug|2nd>]'
+				echo 'Usage: diag [-h] [-l] [-a] [-i] [-s] [-v <volume mount point>] [-m <model identifier] [-u] [-d <sound|graphics|tm|usb|mm|b2m|font|full|swap|unplug|2nd|launchd>]'
 				echo '    By default, run SMART tests on all attached drives.  If SMART tests are'
 				echo '    not available, run software tests on all mounted volumes.  Otherwise,'
 				echo '    run software tests on all mounted volumes other than the boot volume.'
@@ -1163,6 +1163,7 @@ diag () {
 				echo '        swap:      Swap full messages'
 				echo '        unplug:    Errors likely caused by improperly unplugging an external drive'
 				echo '        2nd:       IO errors related to secondary(external) drives'
+				echo '        launchd:   launchd respawn errors'
 				
 				if [ $RUN_DIAG_COMMAND_AT_END -eq 0 ]
 				then
