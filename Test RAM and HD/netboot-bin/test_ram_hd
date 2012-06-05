@@ -1,14 +1,8 @@
 #!/bin/sh
 
-#touch /var/netboot/tmp_write_test
+# Put this file in /var/netboot/bin on your tester drive.  Make sure this is in root's path.
+# Additionally, put this file in NetBootClients0/bin on your netboot server.
 
-#if [ -e /var/netboot/tmp_write_test ]
-#then
-#	rm /var/netboot/tmp_write_test
-#else
-#	mount -uw / >& /dev/null
-#	mount_network_share >& /dev/null
-#fi
 
 source /var/netboot/bin/test_ram_hd_source
 

@@ -1,14 +1,11 @@
 #!/bin/sh
 
+# Put this file in /var/root/bin on your tester drive.  Make sure this is in root's path.
 
-#source /var/root/bin/test_ram_hd_source
 
 if [ ! -d /var/netboot/Tests/$SERIALNUMBER ]
 then
-	mount_network_share >& /dev/null
+	mount_network_share
 fi
-
-#show_hd_test_summary
-#show_ram_test_summary
 
 /var/netboot/bin/show_ram_hd_results

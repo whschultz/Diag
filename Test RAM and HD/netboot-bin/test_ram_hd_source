@@ -1,7 +1,12 @@
 #!/bin/sh
 
-#mount -uw /
-#mount_network_share
+# Put this file in /var/netboot/bin on your tester drive.  Make sure this is in root's path.
+# Additionally, put this file in NetBootClients0/bin on your netboot server.  With it in
+# both locations, if your tester drive is used as a drive, these commands will work.  If
+# it's used as a netboot master, it will be able to store log files on the server that
+# survive a reboot.  Furthermore, if the script needs updating, the netboot image does not
+# need to be recreated.
+
 
 TERM=xterm-color
 
