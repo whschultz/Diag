@@ -445,6 +445,18 @@ END {
 	next;
 }
 
+/launchd.*Throttling respawn/ {
+	split($6,a,"(");
+	split(a[2],b,")");
+	process_name=b[1];
+	
+	if ( ignore_crashing_launchd == 0 )
+		handle_error_row($0,("Throttling respawn " process_name),YELLOW);
+	else
+		handle_ignored_error($0,("Throttling respawn " process_name),YELLOW);
+	next;
+}
+
 
 ####################################################################
 #
