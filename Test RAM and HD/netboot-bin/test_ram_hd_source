@@ -48,7 +48,6 @@ handle_trap_without_exit () {
 
 	show_hd_test_summary
 	show_ram_test_summary
-	
 }
 
 handle_exit () {
