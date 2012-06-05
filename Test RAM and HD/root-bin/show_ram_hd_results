@@ -2,10 +2,24 @@
 
 # Put this file in /var/root/bin on your tester drive.  Make sure this is in root's path.
 
+export SERIALNUMBER="`system_profiler SPHardwareDataType | awk '/r \(system\)/ { print $4 }'`"
 
 if [ ! -d /var/netboot/Tests/$SERIALNUMBER ]
 then
-	mount_network_share
-fi
+	if [ `df -l | awk '/\/$/ { if ( $1 ~ /dev/disk ) print "yes"; else print "no"; }'` -eq "yes" ]
+	then
+		echo "Couldn't find any local logs for a machine with this serial number:  $SERIALNUMBER"
+	else
+		# Netbooted
+		mount_network_share
 
-/var/netboot/bin/show_ram_hd_results
+		if [ ! -d /var/netboot/Tests/$SERIALNUMBER ]
+		then
+			echo "Couldn't find any logs on the server for a machine with this serial number:  $SERIALNUMBER"			
+		else
+			/var/netboot/bin/show_ram_hd_results
+		fi
+	fi
+else
+	/var/netboot/bin/show_ram_hd_results
+fi
