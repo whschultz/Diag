@@ -102,7 +102,7 @@ check_for_panic_logs () {
 		if [ -e "$1"/Library/Logs/panic.log ]
 		then
 			NEWEST="$1"/Library/Logs/panic.log
-			DATE_OF_NEWEST=`cat "$1"/Library/Logs/panic.log | awk '/[A-Za-z]+ [A-Za-z]+ [0-9]+ [0-9]+:[0-9]+:[0-9]+ [0-9]+/ { latest=$0; } END { print latest }'`
+			DATE_OF_NEWEST=`cat "$1"/Library/Logs/panic.log | awk '/[A-Za-z]+( )+[A-Za-z]+( )+[0-9]+( )+[0-9]+:[0-9]+:[0-9]+( )+[0-9]+/ { latest=$0; } END { print latest }'`
 		fi
 		
 		if [ $TOTAL_LOG_FILES -gt 0 ]
