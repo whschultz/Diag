@@ -182,7 +182,7 @@ do_show_relevant_panic_info () {
 			then
 				awk '/Interval|Kernel version/, /loaded kexts/' "$FILE" | egrep --color=always -C 50 '(com|edu|org)(\.[a-zA-Z]*)+|type.*,|cpu [0-9]+|Faulting CPU: 0x[0-9A-Fa-f]+|Darwin Kernel Version [0-9]+(\.[0-9]+)+|System model name: [A-Za-z]+[0-9]+,[0-9]'
 			else
-				egrep --color=always -C 50 '(com|edu|org)(\.[a-zA-Z]*)+|[tT]ype [0-9]+=[a-zA-Z ]+|(cpu|CPU) [0-9]+|Darwin Kernel Version [0-9]+(\.[0-9]+)+|System model name: [A-Za-z]+[0-9]+,[0-9]' "$FILE"
+				awk '/\*\*\*\*\*\*\*\*\*/, /loaded kexts|RELEASE_(I386|PPC)/' "$FILE" | egrep --color=always -C 50 '(com|edu|org)(\.[a-zA-Z]*)+|[tT]ype [0-9]+=[a-zA-Z ]+|(cpu|CPU) [0-9]+|Darwin Kernel Version [0-9]+(\.[0-9]+)+|System model name: [A-Za-z]+[0-9]+,[0-9]'
 			fi
 		done
 	fi
