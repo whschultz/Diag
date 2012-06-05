@@ -56,7 +56,7 @@ BEGIN {
 
 	# Currently, the following has been verified on 10.6.
 	# List internal drives that are not ejectable.
-	program_for_list_of_drives="system_profiler -listDataTypes | egrep 'ATA|SCSI' | xargs system_profiler | awk '/BSD Name.*disk[0-9]+$/ { print $3 }' | xargs -n 1 diskutil info | awk '/Ejectable/ { if ( $2 == "No" ) print identifier; } /Device Identifier/ { identifier=$3; }'"
+	program_for_list_of_drives="system_profiler -listDataTypes | egrep 'ATA|SCSI' | xargs system_profiler | awk '/BSD Name.*disk[0-9]+$/ { print $3 }' | xargs -n 1 diskutil info | awk '/Ejectable/ { if ( $2 == \"No\" ) print identifier; } /Device Identifier/ { identifier=$3; }'"
 
 	# The following lists internal SCSI, ATA, or SATA drives, even if they are ejectable.
 	#program_for_list_of_drives="system_profiler -listDataTypes | egrep 'ATA|SCSI' | xargs system_profiler | awk '/BSD Name.*disk[0-9]+$/ { print $3 }'"
