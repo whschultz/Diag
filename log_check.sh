@@ -192,7 +192,7 @@ BEGIN {
 	next;
 }
 
-/(AppleUSBMultitouchDebug|AppleUSBMultitouchDriver).*(packet checksum is incorrect|returning error|reported error)/ {
+/(AppleUSBMultitouchDebug|AppleUSBMultitouchDriver).*(packet checksum is incorrect|returning error|reported error|returned (an )?error)/ {
 	if ( ignore_usb_errors == 0 )
 		handle_error_row($0,"Trackpad",PURPLE);
 	else
