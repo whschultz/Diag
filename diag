@@ -785,7 +785,7 @@ diag () {
 	# the arguments differently from what the set command below does.
 	if [ $? != 0 ]
 	then
-		echo 'Usage: diag [-h] [-l] [-a] [-i] [-s] [-v <volume mount point>] [-d <afsc|sound|graphics|tm|usb|mm|b2m|font|full|swap|unplug|2nd>]'
+		echo 'Usage: diag [-h] [-l] [-a] [-i] [-s] [-v <volume mount point>] [-d <sound|graphics|tm|usb|mm|b2m|font|full|swap|unplug|2nd>]'
 		echo '    run "diag -h" for more information'
 		return
 	fi
@@ -859,7 +859,7 @@ diag () {
 				IGNORE_SMART_ERRORS=0 # true
 				shift;;
 			-h)
-				echo 'Usage: diag [-h] [-l] [-a] [-i] [-s] [-v <volume mount point>]'
+				echo 'Usage: diag [-h] [-l] [-a] [-i] [-s] [-v <volume mount point>] [-d <sound|graphics|tm|usb|mm|b2m|font|full|swap|unplug|2nd>]'
 				echo '    By default, run SMART tests on all attached drives.  If SMART tests are'
 				echo '    not available, run software tests on all mounted volumes.  Otherwise,'
 				echo '    run software tests on all mounted volumes other than the boot volume.'
@@ -877,6 +877,20 @@ diag () {
 				echo '        run only SMART tests and then quit'
 				echo '    -v <volume mount point>'
 				echo '        run software tests on only this mount point'
+				echo ''
+				echo '    -d <sound|graphics|tm|usb|mm|b2m|font|full|swap|unplug|2nd>'
+				echo '        when showing log files, don\t show these errors:'
+				echo '        sound:     Sound errors'
+				echo '        graphics:  Graphics card errors'
+				echo '        tm:        Time Machine errors'
+				echo '        usb:       USB errors'
+				echo '        mm:        Multimedia errors'
+				echo '        b2m:       Back to My Mac errors'
+				echo '        font:      Font errors'
+				echo '        full:      Disk near full messages'
+				echo '        swap:      Swap full messages'
+				echo '        unplug:    Errors likely caused by improperly unplugging an external drive'
+				echo '        2nd:       IO errors related to secondary(external) drives'
 				
 				if [ $RUN_DIAG_COMMAND_AT_END -eq 0 ]
 				then
