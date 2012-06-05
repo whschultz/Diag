@@ -791,6 +791,10 @@ check_power_cord_wattage () {
 	MODEL_IDENTIFIER="`system_profiler SPHardwareDataType | awk '/Model Identifier/ { print $3 }'`"
 	WATTAGE="`pmset -g ac | awk '/Wattage/ { print $3 }'`"
 
+	RED=`tput setaf 1`
+	YELLOW=`tput setaf 3`
+	RESET=`tput sgr0`
+
 	if [ "$WATTAGE" = "45W" ]
 	then
 		# Only a MacBook Air will work correctly on this
@@ -798,7 +802,7 @@ check_power_cord_wattage () {
 		then
 			echo "Detected $WATTAGE power cord, which is fine on this machine."
 		else
-			echo "This is only $WATTAGE power cord, which is not enough for this machine:  $MODEL_IDENTIFIER"
+			echo $RED"This is only $WATTAGE power cord, which is not enough for this machine:  $MODEL_IDENTIFIER"$RESET
 		fi
 	else
 		if [ "$WATTAGE" = "60W" ]
@@ -814,7 +818,7 @@ check_power_cord_wattage () {
 					# MacBookPro5,4  MacBookPro5,5  MacBookPro7,1  MacBookPro8,1
 					echo "Detected $WATTAGE power cord, which is fine on this machine."				
 				else
-					echo "This is only $WATTAGE power cord, which is not enough for this machine:  $MODEL_IDENTIFIER"
+					echo $RED"This is only $WATTAGE power cord, which is not enough for this machine:  $MODEL_IDENTIFIER"$RESET
 				fi
 			fi
 		else
@@ -828,7 +832,7 @@ check_power_cord_wattage () {
 					# No adapter attached
 					if [ -n "`echo $MODEL_IDENTIFIER | grep MacBook`" ]
 					then
-						echo "No adapter detected on this laptop."
+						echo $YELLOW"No adapter detected on this laptop."$RESET
 					fi
 					# otherwise, it's a desktop.
 				else
