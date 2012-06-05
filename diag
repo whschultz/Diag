@@ -1,0 +1,1296 @@
+#!/bin/sh
+
+####################################################################
+#
+#  Written by Hank Schultz for Charlotte Street Computers
+#
+#
+#  Usage:
+#
+#  source diag.sh
+#    Adds functions to your existing environment.
+#    This only works if you're running a bash shell.
+#    Run "diag" afterwards to run these tests on all mounted volumes
+#    other than the boot volume.
+#
+#
+#  By default, this script will verify the SMART status of all
+#  connected and capable drives.  If any of the drives fail, log
+#  files will not be checked.  If you source this script, there are
+#  many functions added to your environment that can be used:
+#  
+#  check_logs
+#    Checks logs of all mounted volumes with the exception of the
+#    boot volume.  Looks for USBF errors, disk I/O errors, certain
+#    NVDA errors, and certain IOKit errors that appear to be related
+#    to FireWire failures.
+#
+#  show_USBF_errors
+#  show_IO_errors
+#  show_IOKit_errors
+#  show_graphics_errors
+#    These show the respective log errors with several lines of
+#    context.  Recommend piping into less.
+#
+#  check_boot_volume_logs
+#    Checks logs on the root volume.  Useful if currently booted to
+#    customer's OS.
+#
+#  show_boot_volume_errors
+#    If errors are found by the above command, this will show all of
+#    them.  Again, recommend piping into less.
+#
+#
+#
+
+#for DIR in "$COMP_WORDS"
+#do
+#	echo $DIR
+#done
+#PATH_TO_DIAG_SCRIPT="$BASH_COMMAND"
+
+#echo $PATH_TO_DIAG_SCRIPT
+#echo $BASH_EXECUTION_STRING
+#echo $1
+#echo $PWD
+#echo $$
+
+RUN_DIAG_COMMAND_AT_END=1 # false
+IGNORE_SMART_ERRORS=1 # false
+
+if [ \( `echo $0 | egrep -c 'diag$'` -gt 0 \) -o \( `echo $0 | egrep -c 'diag.*app.*script'` -gt 0 \) ]
+then
+	# is not being sourced, so run command
+	RUN_DIAG_COMMAND_AT_END=0 # true
+	
+	# note that the 'diag.*app.*script' portion above is to allow this script
+	# to be included in a Platypus app, if so desired.
+fi
+
+
+#export PATH=/opt/local/bin:/opt/local/sbin:$PATH
+# Finished adapting your PATH environment variable for use with MacPorts.
+
+
+# The following allows found errors in logs to be highlighted by the various
+# show_* commands.  grep will output color, regardless whether it's being piped,
+# and therefore, the less command needs to interpret color codes properly, so
+# it's aliased to include the flag that allows that.
+export GREP_COLOR='1;35'
+alias less="less -r"
+
+
+####################################################################
+# Function definitions
+
+
+if [ $LOGNAME ]
+then
+	if [ `uname -r | awk '{ split($0,a,"."); print a[1];}'` -gt 8 ]
+	then
+		# if running an OS later than 10.4, get proper boot volume name
+		TMPFILE=`mktemp /tmp/boot_volume_info.XXXXXX`
+		diskutil info -plist / >> "$TMPFILE".plist
+		BOOT_VOLUME_NAME=`defaults read $TMPFILE VolumeName`
+		rm $TMPFILE
+		rm $TMPFILE.plist
+	else
+		# else get the boot volume name another way... which might work better,
+		# since it doesn't require write access to the boot volume.
+		BOOT_VOLUME_NAME="`diskutil info / | grep "Volume Name" | sed -E 's/.*Volume Name: *(.*)/\1/'`"
+	fi
+else
+	BOOT_VOLUME_NAME="/"
+fi
+
+
+check_for_panic_logs () {
+	if [ -e "$1"/Library/Logs ]
+	then
+		TOTAL_LOG_FILES=`find -E "$1"/Library/Logs -regex '^.*\.panic$' | wc -l`
+		
+		if [ -e "$1"/Library/Logs/panic.log ]
+		then
+			LOGS_IN_PANIC_LOG="`grep -c '\*\*\*\*\*\*\*\*\*' "$1"/Library/Logs/panic.log`"
+		else
+			LOGS_IN_PANIC_LOG=0
+		fi
+	
+		TOTAL_LOGS=$(($TOTAL_LOG_FILES+$LOGS_IN_PANIC_LOG))
+	
+		if [ $TOTAL_LOGS -gt 0 ]
+		then
+			echo "Warning:  Found" $TOTAL_LOGS "panic logs on $1."
+		fi
+	fi
+}
+
+show_relevant_panic_info () {
+	for VOLUME in /Volumes/*
+	do
+		if [ "$VOLUME" != "/Volumes/$BOOT_VOLUME_NAME" ]
+		then
+			do_show_relevant_panic_info "$VOLUME"
+		fi
+	done
+}
+
+do_show_relevant_panic_info () {
+	shopt -q nullglob
+	NULLGLOBSET=$?
+	
+	# we're doing globs that may match no results, but we don't want errors
+	shopt -s nullglob
+
+	if [ -e "$1"/Library/Logs ]
+	then
+		echo "-----------" $1 "-- Panic logs -----------"
+
+		#OS_ON_VOLUME=`defaults read "$1"/System/Library/CoreServices/SystemVersion ProductVersion | awk '{ split($0,a,"."); print a[1];}'`
+		for FILE in "$1"/Library/Logs/{panic.*,*/*.panic}
+		do
+			echo "-----------" $FILE "-- panic info -----------"
+			# use awk to limit what portions of the log file we see, and use
+			# grep to highlight potentially relevant obvious causes with enough
+			# context that grep won't ever leave anything out.
+			# At the moment, this has been tested on one log file on 10.7.1
+			if [ `basename $FILE` != "panic.log" ]
+			then
+				awk '/Interval|panic\(|Kernel version/, /loaded kexts|\*\*\*\*\*\*\*\*\*/' "$FILE" | egrep --color=always -C 50 '(com|edu|org)(\.[a-zA-Z]*)+|type.*,|cpu [0-9]+|Faulting CPU: 0x[0-9A-Fa-f]+|Darwin Kernel Version [0-9]+(\.[0-9]+)+|System model name: [A-Za-z]+[0-9]+,[0-9]'
+			else
+				egrep --color=always -C 50 '(com|edu|org)(\.[a-zA-Z]*)+|[tT]ype [0-9]+=[a-zA-Z ]+|(cpu|CPU) [0-9]+|Darwin Kernel Version [0-9]+(\.[0-9]+)+|System model name: [A-Za-z]+[0-9]+,[0-9]' "$FILE"
+			fi
+		done
+	fi
+	
+	# return the setting to what it was at the beginning of the function call
+	if [ $NULLGLOBSET -gt 0 ]
+	then
+		shopt -u nullglob
+	fi
+}
+
+check_for_TimeMachine_errors () {
+	TOTAL_ERRORS=`do_show_all_logs "$1" | grep -c -E 'backupd.*(Backup failed|FSMountServerVolumeSync failed with error|Error writing to backup log.*Input/output error)'`
+
+	if [ $TOTAL_ERRORS -gt 0 ]
+	then
+		echo "Warning:  Found" $TOTAL_ERRORS "Time Machine related errors in logs on $1."
+	fi
+}
+
+
+show_TimeMachine_errors () {
+	for VOLUME in /Volumes/*
+	do
+		if [ "$VOLUME" != "/Volumes/$BOOT_VOLUME_NAME" ]
+		then
+			do_show_TimeMachine_errors "$VOLUME"
+		fi
+	done
+}
+
+do_show_TimeMachine_errors () {
+	echo "-----------" $1 "-- Time Machine Errors -----------"
+	
+	do_show_all_logs "$1" | grep --color=always -C 10 -E 'backupd.*(Backup failed|FSMountServerVolumeSync failed with error|Error writing to backup log.*Input/output error)'
+
+}
+
+
+check_for_Sound_errors () {
+	TOTAL_ERRORS=`do_show_all_logs "$1" | grep -c -E 'Sound assertion.*failed'`
+
+	if [ $TOTAL_ERRORS -gt 0 ]
+	then
+		echo "Warning:  Found" $TOTAL_ERRORS "Sound related errors in logs on $1."
+	fi
+}
+
+
+show_Sound_errors () {
+	for VOLUME in /Volumes/*
+	do
+		if [ "$VOLUME" != "/Volumes/$BOOT_VOLUME_NAME" ]
+		then
+			do_show_Sound_errors "$VOLUME"
+		fi
+	done
+}
+
+do_show_Sound_errors () {
+	echo "-----------" $1 "-- Sound Errors -----------"
+	
+	do_show_all_logs "$1" | grep --color=always -C 10 -E 'Sound assertion.*failed'
+
+}
+
+
+
+check_for_NAT_errors () {
+	TOTAL_ERRORS=`do_show_all_logs "$1" | grep -c -E 'mDNSResponder.*(Double NAT|Failed to obtain NAT port mapping|Registration of record.*members\.mac\.com\..*failed)'`
+
+	if [ $TOTAL_ERRORS -gt 0 ]
+	then
+		echo "Warning:  Found" $TOTAL_ERRORS "Back-to-my-Mac related errors in logs on $1."
+	fi
+}
+
+
+show_NAT_errors () {
+	for VOLUME in /Volumes/*
+	do
+		if [ "$VOLUME" != "/Volumes/$BOOT_VOLUME_NAME" ]
+		then
+			do_show_Bluetooth_errors "$VOLUME"
+		fi
+	done
+}
+
+do_show_NAT_errors () {
+	echo "-----------" $1 "-- NAT Errors -----------"
+	
+	do_show_all_logs "$1" | grep --color=always -C 10 -E 'mDNSResponder.*(Double NAT|Failed to obtain NAT port mapping|Registration of record.*members\.mac\.com\..*failed)'
+
+}
+
+
+check_for_Bluetooth_errors () {
+	TOTAL_ERRORS=`do_show_all_logs "$1" | grep -c -E '(AppleBluetooth.*(Timeout|getReport returned error|Couldn.t get battery (percentage|state) from device|Could not send .* command)|Bluetooth Setup Assistant.*Connection failed for pre-paired device|USBBluetoothHCIController.*timed out after)'`
+
+	if [ $TOTAL_ERRORS -gt 0 ]
+	then
+		echo "Warning:  Found" $TOTAL_ERRORS "Bluetooth errors in logs on $1.  Suspect flaky Bluetooth device or dying battery."
+	fi
+}
+
+
+show_Bluetooth_errors () {
+	for VOLUME in /Volumes/*
+	do
+		if [ "$VOLUME" != "/Volumes/$BOOT_VOLUME_NAME" ]
+		then
+			do_show_Bluetooth_errors "$VOLUME"
+		fi
+	done
+}
+
+do_show_Bluetooth_errors () {
+	echo "-----------" $1 "-- Bluetooth Errors -----------"
+	
+	do_show_all_logs "$1" | grep --color=always -C 10 -E '(AppleBluetooth.*(Timeout|getReport returned error|Couldn.t get battery (percentage|state) from device|Could not send .* command)|Bluetooth Setup Assistant.*Connection failed for pre-paired device|USBBluetoothHCIController.*timed out after)'
+}
+
+
+
+show_USBF_errors () {
+	for VOLUME in /Volumes/*
+	do
+		if [ "$VOLUME" != "/Volumes/$BOOT_VOLUME_NAME" ]
+		then
+			do_show_USBF_errors "$VOLUME"
+		fi
+	done
+}
+
+do_show_USBF_errors () {
+	echo "-----------" $1 "-- USB Errors -----------"
+	
+	do_show_all_logs "$1" | grep --color=always -C 10 -E '(USBF|IOUSBMassStorageClass|AppleUSBMultitouchDebug|USB Notification).*(timing|is having trouble enumerating|was not able to enumerate|The device is still unresponsive|data length is 0 in enqueueData|Device.*is violating.*the USB Specification|has caused an overcurrent condition|returning error|reported error)' 
+}
+
+check_for_USBF_errors () {
+	TOTAL_ERRORS=`do_show_all_logs "$1" | grep -c -E '(USBF|IOUSBMassStorageClass|AppleUSBMultitouchDebug|USB Notification).*(timing|is having trouble enumerating|was not able to enumerate|The device is still unresponsive|data length is 0 in enqueueData|Device.*is violating.*the USB Specification|has caused an overcurrent condition|returning error|reported error)'`
+
+	if [ $TOTAL_ERRORS -gt 0 ]
+	then
+		echo "Warning:  Found" $TOTAL_ERRORS "USB errors in logs on $1.  Suspect USB device(s) as a cause of beachballing."
+	fi
+}
+
+
+
+
+show_IO_errors () {
+	for VOLUME in /Volumes/*
+	do
+		if [ "$VOLUME" != "/Volumes/$BOOT_VOLUME_NAME" ]
+		then
+			do_show_IO_errors "$VOLUME"
+		fi
+	done
+}
+
+do_show_IO_errors () {
+	echo "-----------" $1 "-- I/O errors -----------"
+	
+	do_show_all_logs "$1" | grep --color=always -C 10 -E '(disk.*(I\/O (error|timeout)|media is not present|\(UNDEFINED\)|close: journal .*, is invalid)|SAM Multimedia: READ or WRITE failed|fseventsd.*failed to unlink old log file.*\(Input/output error\)|backupd.*Input/output error)' 
+}
+
+check_for_IO_errors () {
+	TOTAL_ERRORS=`do_show_all_logs "$1" | grep -c -E '(disk.*(I\/O (error|timeout)|media is not present|\(UNDEFINED\)|close: journal .*, is invalid)|SAM Multimedia: READ or WRITE failed|fseventsd.*failed to unlink old log file.*\(Input/output error\)|backupd.*Input/output error)'`
+
+	if [ $TOTAL_ERRORS -gt 0 ]
+	then
+		echo "Warning:  Found" $TOTAL_ERRORS "I/O errors in logs on $1.  Suspect a bad disk or drive as a potential cause of beachballing."
+	fi
+}
+
+
+
+check_for_IOKit_errors () {
+	TOTAL_ERRORS=`do_show_all_logs "$1" | grep -c -E '(timed out waiting for IOKit to quiesce|AppleSMUsendMISC: FAILURE -- TIMEOUT EXCEEDED on GPIO|FireWire.*no valid selfIDs.*after bus reset)'`
+
+	if [ $TOTAL_ERRORS -gt 0 ]
+	then
+		echo "Warning:  Found" $TOTAL_ERRORS "IOKit errors in logs on $1.  Run \"show_IOKit_errors\" to see them."
+	fi
+}
+
+show_IOKit_errors () {
+	for VOLUME in /Volumes/*
+	do
+		if [ "$VOLUME" != "/Volumes/$BOOT_VOLUME_NAME" ]
+		then
+			do_show_IOKit_errors "$VOLUME"
+		fi
+	done
+}
+
+do_show_IOKit_errors () {
+	echo "-----------" $1 "-- IOKit errors -----------"
+	
+	do_show_all_logs "$1" | grep --color=always -C 10 -E '(timed out waiting for IOKit to quiesce|AppleSMUsendMISC: FAILURE -- TIMEOUT EXCEEDED on GPIO|FireWire.*no valid selfIDs.*after bus reset)' 
+}
+
+
+
+
+show_graphics_errors () {
+	for VOLUME in /Volumes/*
+	do
+		if [ "$VOLUME" != "/Volumes/$BOOT_VOLUME_NAME" ]
+		then
+			do_show_graphics_errors "$VOLUME"
+		fi
+	done
+}
+
+do_show_graphics_errors () {
+	echo "-----------" $1 "-- Graphics errors -----------"
+	
+	do_show_all_logs "$1" | grep --color=always -C 10 -E '((NVDA|NVChannel)\((Compute|OpenGL|Display)\).*(exception|timeout)|ATIRadeon.*Overflowed|GPU Debug Info)' 
+}
+
+check_for_graphics_errors () {
+	TOTAL_ERRORS=`do_show_all_logs "$1" | grep -c -E '((NVDA|NVChannel)\((Compute|OpenGL|Display)\).*(exception|timeout)|ATIRadeon.*Overflowed|GPU Debug Info)'`
+
+	if [ $TOTAL_ERRORS -gt 0 ]
+	then
+		echo "Warning:  Found" $TOTAL_ERRORS "graphics-related errors in logs on $1.  Suspect bad graphics."
+	fi
+}
+
+
+show_all_Shutdown_causes () {
+	for VOLUME in /Volumes/*
+	do
+		if [ "$VOLUME" != "/Volumes/$BOOT_VOLUME_NAME" ]
+		then
+			echo "-----------" $VOLUME "-----------"
+#			do_show_all_logs "$VOLUME" | grep -E 'Previous (Shutdown|Sleep) Cause'
+			do_show_all_Shutdown_causes "$VOLUME"
+		fi
+	done
+}
+
+do_show_all_Shutdown_causes () {
+	MODEL_IDENTIFIER="`system_profiler SPHardwareDataType | awk '/Model Identifier/ { print $3 }'`"
+	# use the above information to tweak the list for specific models
+	
+	RED=`tput setaf 1`
+	YELLOW=`tput setaf 3`
+	BOLD=`tput smso` 
+	OFFBOLD=`tput rmso`
+	RESET=`tput sgr0`
+	
+	echo "-----------" $1 "-- Shutdown causes -----------"
+	
+	do_show_all_logs "$1" | gawk '/Previous (Shutdown|Sleep) Cause/ { 											\
+		switch ( $9 ) {																							\
+		case 0:																									\
+			if ( "'$MODEL_IDENTIFIER'" ~ /iMac7,1/ )															\
+				explanation="(power disconnected or booted from different device.  Expected normal behavior)"; 	\
+			else if ( "'$MODEL_IDENTIFIER'" ~ /iMac[0-9]+,[0-9]+/ )												\
+				explanation="(power disconnected.  Expected normal behavior)"; 									\
+			else																								\
+				explanation="(battery/power disconnected.  Expected normal behavior)"; 							\
+			break;																								\
+		case 3:																									\
+			switch ( "'$MODEL_IDENTIFIER'" ) {																	\
+				case /MacBookPro5,5/ :																			\
+					explanation="(normal restart or power button forced shutdown.  Expected normal behavior)";	\
+					break;																						\
+				case /MacBookPro[0-9]+,[0-9]+/ :																\
+					explanation="(normal restart or power button forced shutdown.  Expected normal behavior)";	\
+					break;																						\
+				default:																						\
+					explanation="(power button forced shutdown.  Expected normal behavior)";					\
+					break;																						\
+			}																									\
+			break;																								\
+		case 5:																									\
+		case -5:																								\
+			explanation="(normal shutdown or sleep)";															\
+			break;																								\
+		case -128:																								\
+			explanation="'$YELLOW'(not known.  Did it boot from a different OS?  Potentially normal behavior)'$RESET'";	\
+			break;																								\
+		case -61:																								\
+			explanation="'$YELLOW'(OS X watchdog shutdown timer.  OS stopped responding)'$RESET'";				\
+			break;																								\
+		case -62:																								\
+			explanation="'$YELLOW'(OS X watchdog restart timer.  OS stopped responding)'$RESET'";				\
+			break;																								\
+		case -2:			 																					\
+			switch ( "'$MODEL_IDENTIFIER'" ) {																	\
+				case /iMac7,1/ :																				\
+					explanation="'$RED'(power supply disconnected.  Suspicious behavior)'$RESET'";				\
+					break;																						\
+				case /iMac[0-9]+,[0-9]+/ :																		\
+					explanation="'$RED'(power supply disconnected.)'$RESET'";									\
+					break;																						\
+				default:																						\
+					explanation="'$YELLOW'(power supply disconnected.  Normal if unplugged with no battery.)'$RESET'";	\
+					break;																						\
+			}																									\
+			break; 																								\
+		case 2:																									\
+		case -60:																								\
+			explanation="'$YELLOW'(battery died.  Potentially normal behavior)'$RESET'";						\
+			break;																								\
+		case -3:			 																					\
+			switch ( "'$MODEL_IDENTIFIER'" ) {																	\
+				case /MacBook[0-9]+,[0-9]+/ :																	\
+					explanation="'$RED'(multiple sensors overtemp.  Check fan.)'$RESET'";						\
+					break;																						\
+				default:																						\
+					explanation="'$RED'(multiple sensors overtemp.  Run ASD to see which ones)'$RESET'";		\
+					break;																						\
+			} 																									\
+		case -103:																								\
+			explanation="'$YELLOW'(battery undervoltage; bad battery)'$RESET'";									\
+			break;																								\
+		case -74:																								\
+			explanation="'$RED'(battery overtemp)'$RESET'";														\
+			break;																								\
+		case -70:																								\
+			explanation="'$RED'(replace top case)'$RESET'";														\
+			break;																								\
+		case -75:																								\
+			explanation="'$YELLOW'(communication issue with power adapter)'$RESET'";							\
+			break;																								\
+		case -78:																								\
+			explanation="'$YELLOW'(incorrect current value coming from AC adapter.  suspect charging circuitry)'$RESET'";	\
+			break;																								\
+		case -79:																								\
+			explanation="'$YELLOW'(incorrect current value coming from battery.  suspect charging circuitry)'$RESET'";	\
+			break;																								\
+		case -82:																								\
+			explanation="'$RED'(check thermal sensors)'$RESET'";												\
+			break;																								\
+		case -86:																								\
+			explanation="'$RED'(conflicting causes.  On MBA:  Charger circuit on logic board.  On MBP:  Proximity temperature exceeds limits)'$RESET'";\
+			break;																								\
+		case -100:																								\
+			explanation="'$RED'(power supply temp exceeds limits.  Check fans and air flow)'$RESET'";			\
+			break;																								\
+		case -101:																								\
+			explanation="'$RED'(LCD overtemp.  Check LCD panel and environment temperature)'$RESET'";			\
+			break;																								\
+		case -4:																								\
+		case -72:																								\
+		case -84:																								\
+		case -95:																								\
+			switch ( "'$MODEL_IDENTIFIER'" ) {																	\
+				case /MacBook[0-9]+,[0-9]+/:																	\
+					explanation="'$RED'(overtemp.  Check fan.  Reapply thermal paste)'$RESET'";					\
+					break;																						\
+				default:																						\
+					explanation="'$RED'(overtemp.  Reapply thermal paste)'$RESET'";								\
+					break;																						\
+			} 																									\
+			break;																								\
+		default:																								\
+			explanation="'$BOLD$RED'(abnormal, not found in documentation)'$RESET'"; 							\
+			break;																								\
+		}																										\
+		print $7 "   \tat " $1 " " $2 " " $3 "\t: " $9 "\t" explanation;										\
+		list_of_causes[$9]++;																					\
+		show_summary=1;																							\
+		if ( $9 > max )																							\
+			max = $9;																							\
+		if ( $9 < min )																							\
+			min = $9;																							\
+	}																											\
+	/AppleSMU -- shutdown cause/ { print $0; }																	\
+	BEGIN {																										\
+		show_summary=0;																							\
+	}																											\
+	END {																										\
+		if ( show_summary ) {																					\
+			print "\ncause\t: count";																			\
+			for (cause=max; cause >= min; cause--) {															\
+				if ( cause in list_of_causes )																	\
+					print cause "\t: " list_of_causes[cause];													\
+			}																									\
+		}																										\
+	}'
+}
+
+check_for_Shutdown_errors () {
+#	do_show_all_logs "$1" | awk '/Previous (Shutdown|Sleep) Cause/ { \
+#		if ( $9 < 0 && $9 != -5 ) \
+#			print "Suspicious " $7 " Cause at " $1 " " $2 " " $3 " : " $9; }'
+
+
+	do_show_all_logs "$1" | awk '/Previous (Shutdown|Sleep) Cause/ { \
+		explanation="normal";\
+		if ( $9 == -128 ) \
+			explanation="(not known.  Did it boot from a different OS?)";\
+		else if ( $9 == -61 ) \
+			explanation="(watchdog shutdown timer)";\
+		else if ( $9 == -62 ) \
+			explanation="(watchdog restart timer)";\
+		else if ( $9 == 2 || $9 == -60 ) \
+			explanation="(battery died)";\
+		else if ( $9 == -103 ) \
+			explanation="(battery undervoltage; bad battery)";\
+		else if ( $9 == -74 ) \
+			explanation="(battery overtemp)";\
+		else if ( $9 == -70 ) \
+			explanation="(replace top case)";\
+		else if ( $9 == -4 || $9 == -3 || $9 == -72 || $9 == -84 || $9 == -95 ) \
+			explanation="(overtemp.  Reapply thermal paste.  Check fans)";\
+		else if ( $9 < 0 && $9 != -5 ) \
+			explanation="";\
+		if ( explanation != "normal" )\
+			print "Suspicious " $7 "\tat " $1 " " $2 " " $3 "\t: " $9 "\t" explanation;\
+		} \
+		/AppleSMU -- shutdown cause/ {\
+		if ( $11 < 0 ) \
+			print "Suspicious shutdown cause at " $1 " " $2 " " $3 " : " $11; }'
+}
+
+
+show_all_logs () {
+	for VOLUME in /Volumes/*
+	do
+		if [ "$VOLUME" != "/Volumes/$BOOT_VOLUME_NAME" ]
+		then
+			echo "-----------" $VOLUME "-----------"
+			do_show_all_logs "$VOLUME"
+		fi
+	done
+}
+
+do_show_all_logs () {
+	# show logs in proper order from oldest to newest
+	for NUMBER in 9 8 7 6 5 4 3 2 1 0
+	do
+		if [ -e "$1"/var/log/kernel.log.$NUMBER.bz2 ]
+		then
+			bzcat "$1"/var/log/kernel.log.$NUMBER.bz2
+		fi
+		if [ -e "$1"/var/log/kernel.log.$NUMBER.gz ]
+		then
+			gzcat "$1"/var/log/kernel.log.$NUMBER.gz
+		fi
+	done
+	if [ -e "$1"/var/log/kernel.log ]
+	then
+		cat "$1"/var/log/kernel.log
+	fi
+
+	
+	for NUMBER in 9 8 7 6 5 4 3 2 1 0
+	do
+		if [ -e "$1"/var/log/system.log.$NUMBER.bz2 ]
+		then
+			bzcat "$1"/var/log/system.log.$NUMBER.bz2
+		fi
+		if [ -e "$1"/var/log/system.log.$NUMBER.gz ]
+		then
+			gzcat "$1"/var/log/system.log.$NUMBER.gz
+		fi
+	done
+	
+	if [ -e "$1"/var/log/system.log ]
+	then
+		cat "$1"/var/log/system.log
+	fi
+}
+
+
+check_logs () {
+	for VOLUME in /Volumes/*
+	do
+		if [ "$VOLUME" != "/Volumes/$BOOT_VOLUME_NAME" ]
+		then
+			do_check_logs "$VOLUME"
+		fi
+	done
+	
+	echo "    -- logs checked"
+}
+
+do_check_logs () {
+	if [ -e "$1"/var/log ]
+	then
+		echo "----------- Checking logs on mounted volume: " $1 " -----------"
+
+		do_show_all_logs "$1" | log_check.sh
+#	else
+#		echo "    -- Folder does not exist, so no log files to check:  $1/var/log"
+	fi
+	
+	if [ -e "$1"/Library/Logs ]
+	then
+		check_for_panic_logs "$1"
+#	else
+#		echo "    -- Folder does not exist, so no log files to check:  $1/Library/Logs"
+	fi
+
+}
+
+
+
+check_boot_volume_logs () {
+	do_check_logs "/"
+	
+	echo "    -- logs checked"
+}
+
+do_show_errors () {
+	if [ -e "$1"/var/log ]
+	then
+		echo "----------- Showing errors in logs on volume: " $1 " -----------"
+
+		do_show_all_logs "$1" | log_check.sh -v print_all_errors=1 $DONT_SHOW_SECONDARY_IO $DONT_SHOW_UNPLUG $DONT_SHOW_SWAP_FULL $DONT_SHOW_HD_FULL $DONT_SHOW_FONT $DONT_SHOW_B2M $DONT_SHOW_MM $DONT_SHOW_AFSC $DONT_SHOW_SOUND $DONT_SHOW_GRAPHICS $DONT_SHOW_TM $DONT_SHOW_USB
+
+#	else
+#		echo "    -- Folder does not exist, so no log files to show:  $1/var/log"
+	fi
+	
+	if [ -e "$1"/Library/Logs ]
+	then
+		do_show_relevant_panic_info "$1"
+#	else
+#		echo "    -- Folder does not exist, so no log files to show:  $1/Library/Logs"
+	fi
+}
+
+show_errors () {
+	for VOLUME in /Volumes/*
+	do
+		if [ "$VOLUME" != "/Volumes/$BOOT_VOLUME_NAME" ]
+		then
+			do_show_errors "$VOLUME"
+		fi
+	done
+}
+
+show_boot_volume_errors () {
+	do_show_errors "/"
+}
+
+
+show_OS_versions () {
+	for VOLUME in /Volumes/*
+	do
+		if [ "$VOLUME" != "/Volumes/$BOOT_VOLUME_NAME" ]
+		then
+			if [ -e "$VOLUME"/System/Library/CoreServices/SystemVersion.plist ]
+			then
+				echo $VOLUME ":  " `defaults read "$VOLUME"/System/Library/CoreServices/SystemVersion ProductVersion`
+			fi
+		fi
+	done
+}
+
+
+
+
+check_preferences () {
+	if [ $LOGNAME = "root" ]
+	then
+		for VOLUME in /Volumes/*
+		do
+			if [ "$VOLUME" != "/Volumes/$BOOT_VOLUME_NAME" ]
+			then
+				do_check_preferences "$VOLUME"
+			fi
+		done
+		
+		echo "    -- preferences checked"
+	else
+		echo "Note: Can't check preferences as non-root user.  Run \"sudo -i\" to check preferences."
+	fi
+}
+
+do_check_preferences () {
+#	echo "-----------" $1 "-----------"
+
+	if [ -d "$1"/Library/Preferences/ ]
+	then
+		find "$1"/Library/Preferences -name '*.plist' -print0 | xargs -n 1 -0 /usr/bin/plutil -s
+	fi
+	
+	
+	for USER in "$1"/Users/*
+	do
+		if [ -d "$USER"/Library/Preferences/ ]
+		then
+#			echo "-----------" $USER "-----------"
+
+			find "$USER"/Library/Preferences -name '*.plist' -print0 | xargs -n 1 -0 /usr/bin/plutil -s
+		fi
+	done
+}
+
+
+check_offline_cache () {
+	if [ $LOGNAME = "root" ]
+	then
+		for VOLUME in /Volumes/*
+		do
+			if [ "$VOLUME" != "/Volumes/$BOOT_VOLUME_NAME" ]
+			then
+				do_check_offline_cache "$VOLUME"
+			fi
+		done
+		
+		echo "    -- eMail caches checked"
+	else
+		echo "Note: Can't check .OfflineCache as non-root user.  Run \"sudo -i\" to check."
+	fi
+
+}
+
+do_check_offline_cache () {
+#	echo "-----------" $1 "-----------"
+	COUNT=0
+	
+	if [ -d "$1"/Users/ ]
+	then
+		for USER in "$1"/Users/*
+		do
+			MAIL_SUBDIR="Library/Mail"
+
+			if [ -d "$USER"/Library/Mail/V2 ]
+			then
+				MAIL_SUBDIR="Library/Mail/V2"
+			fi
+
+			if [ -d "$USER"/"$MAIL_SUBDIR"/ ]
+			then
+				for MAIL_FOLDER in "$USER"/"$MAIL_SUBDIR"/IMAP-*
+				do
+					if [ -d "$MAIL_FOLDER"/.OfflineCache ]
+					then
+						COUNT=$(($COUNT+`find "$MAIL_FOLDER"/.OfflineCache | egrep -c '^.*[0-9]+$'`))
+					fi
+				done
+			fi
+		done
+	fi
+	
+	if [ $COUNT -gt 0 ]
+	then
+		echo "Found non-empty OfflineCache:"
+		
+		for USER in "$1"/Users/*
+		do
+			if [ -d "$USER"/"$MAIL_SUBDIR"/ ]
+			then
+	#			echo "-----------" $USER "-----------"
+	
+				for MAIL_FOLDER in "$USER"/"$MAIL_SUBDIR"/IMAP-*
+				do
+					COUNT=`find "$MAIL_FOLDER"/.OfflineCache | egrep -c '^.*[0-9]+$'`
+					
+					if [ $COUNT -gt 0 ]
+					then
+						SIZE="`du -hx \"$MAIL_FOLDER\"/.OfflineCache | awk '{ print $1 }'`"
+						echo "	$SIZE:	\"$MAIL_FOLDER/.OfflineCache\""
+					fi
+				done
+				
+				for RECOVERED_FOLDER in "$USER"/"$MAIL_SUBDIR"/Mailboxes/Recovered*
+				do
+					COUNT=`find "$RECOVERED_FOLDER" | egrep -c ''`
+					
+					if [ $COUNT -gt 0 ]
+					then
+						SIZE="`du -shx \"$RECOVERED_FOLDER\" | awk '{ print $1 }'`"
+						echo "\tExample:\t$SIZE\t\"$RECOVERED_FOLDER\""
+					fi
+				done
+			fi
+		done
+
+		echo "Suspect mail account failure and possible growing list of recovered email messages."
+	fi
+}
+
+list_internal_drives () {
+	system_profiler -listDataTypes | egrep 'ATA|SCSI' | xargs system_profiler | awk '/BSD Name.*disk[0-9]+$/ { print $3 }'
+}
+
+####################################################################
+# SMART tests
+
+run_all_SMART_tests () {
+	# Turn on SMART support for the first drive.
+	# Show health of first drive, even if it's good.
+	if ( smartctl -s on -q errorsonly disk0 )
+	then
+		smartctl -H disk0
+	else
+		echo "Initial drive does not support SMART.  Note: USB and Firewire do not Support SMART."
+	fi
+	
+	FOUND_HARD_DRIVE_ERRORS=0
+	
+	# Show health of remaining drives only if they exist, are supported, and are bad.
+	for disk in /dev/disk[0-9]
+	do
+		if [ -e $disk ]
+		then
+			# Try to turn on SMART, and check the tables if it's supported
+			if ( smartctl -s on -q errorsonly $disk )
+			then
+				if [ $disk != /dev/disk0 ]
+				then
+					smartctl -H -q errorsonly $disk
+				fi
+				
+				#true
+				CONTINUE_TESTING=0
+				
+				CURRENTPENDINGSECTORS=`smartctl -A \$disk | awk '/Current_Pending_Sector/ { print $10 }'`
+				
+				# if this attribute exists
+				if [ -n "$CURRENTPENDINGSECTORS" ] 
+				then 
+					# and there are errors
+					if [ $CURRENTPENDINGSECTORS -gt 0 ]
+					then
+						echo "Error:  $disk has current pending sectors: "  $CURRENTPENDINGSECTORS
+						FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
+						CONTINUE_TESTING=1 #false
+					fi 
+				fi
+				
+				if [ $CONTINUE_TESTING -eq 0 -o $IGNORE_SMART_ERRORS -eq 0 ]
+				then
+					# else move on to the next attribute
+					OFFLINEUNC=`smartctl -A \$disk | awk '/Offline_Uncorrectable/ { print $10 }'`
+					
+					# if this attribute exists
+					if [ -n "$OFFLINEUNC" ] 
+					then 
+						# and there are errors
+						if [ $OFFLINEUNC -gt 0 ]
+						then
+							echo "Error:  $disk has offline uncorrectable sectors: " $OFFLINEUNC
+							FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
+							CONTINUE_TESTING=1 #false
+						fi
+					fi
+				fi
+				
+				if [ $CONTINUE_TESTING -eq 0 -o $IGNORE_SMART_ERRORS -eq 0 ]
+				then
+					# else move on to the next attribute
+					REALLOC=`smartctl -A \$disk | awk '/Reallocated_Sector_Ct/ { print $10 }'`
+					if [ -n "$REALLOC" ] 
+					then
+						if [ $REALLOC -gt 0 ]
+						then
+							echo "Warning:  $disk has reallocated sectors: " $REALLOC
+							FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
+							CONTINUE_TESTING=1 #false
+						fi 
+					fi
+				fi
+
+				if [ $CONTINUE_TESTING -eq 0 -o $IGNORE_SMART_ERRORS -eq 0 ]
+				then
+					# else move on to the next attribute
+					REALLOC_EV=`smartctl -A \$disk | awk '/Reallocated_Event_Count/ { print $10 }'`
+					if [ -n "$REALLOC_EV" ] 
+					then
+						if [ $REALLOC_EV -gt 0 ]
+						then
+							echo "Warning:  $disk has reallocated events: " $REALLOC_EV
+							FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
+							CONTINUE_TESTING=1 #false
+						fi 
+					fi
+				fi
+				
+				if [ $CONTINUE_TESTING -eq 0 -o $IGNORE_SMART_ERRORS -eq 0 ]
+				then
+					smartctl -l error $disk > /dev/null
+					
+					# do a binary AND against the seventh bit in the return value of the 
+					# last command--per smartctl man page
+					SMARTSTAT=$(($? & 64))
+		
+					if [ $SMARTSTAT -gt 0 ]
+					then
+						POWER_ON_HOURS=`smartctl -A \$disk | awk '/Power_On_Hours/ { print $10 }'`
+						DAYS=`echo $POWER_ON_HOURS / 24 | bc`
+						HOURS=`echo "$POWER_ON_HOURS - 24 * $DAYS" | bc`
+						echo "Warning:  Found errors in SMART log for $disk at the following times:"
+						echo "    Current power on hours: $POWER_ON_HOURS ($DAYS days + $HOURS hours)"
+						smartctl -l error $disk | awk '/occurred at disk power-on lifetime/ { print "        " $0 }'
+						FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
+						CONTINUE_TESTING=1 #false
+					fi
+				fi
+			fi
+		fi
+	done
+}
+
+
+run_software_checks () {
+	if [ $LOGNAME ]
+	then
+		check_logs
+		if [ $LOGNAME = "root" ]
+		then
+			check_preferences
+			check_offline_cache
+		else
+			echo "Some software checks can't be run as a non-root user.  Run \"sudo -i\" to run these additional checks."
+		fi
+	else
+		echo "Logs and preferences not checked in single-user mode."
+	fi
+}
+
+run_software_checks_on_boot_volume () {
+	do_check_logs "/"
+
+	if [ $LOGNAME = "root" ]
+	then
+		do_check_preferences "/"
+		do_check_offline_cache "/"
+	else
+		echo "Some software checks can't be run as a non-root user."
+	fi
+}
+
+
+
+
+
+diag () {
+	CHECK_ALL_DRIVES=1 # false
+	CHECK_SPECIFIC_DRIVE=1 # false
+	JUST_CHECK_SMART_STATUS=1 # false
+	SPECIFIC_DRIVE_TO_CHECK=""
+	SHOW_LOGS_WHEN_DONE=1 # false
+	IGNORE_SMART_ERRORS=1 # false
+	
+
+	args=`getopt hlaisv:d: $*`
+	# you should not use `getopt abo: "$@"` since that would parse
+	# the arguments differently from what the set command below does.
+	if [ $? != 0 ]
+	then
+		echo 'Usage: diag [-h] [-l] [-a] [-i] [-s] [-v <volume mount point>] [-d <afsc|sound|graphics|tm|usb|mm|b2m|font|full|swap|unplug|2nd>]'
+		echo '    run "diag -h" for more information'
+		return
+	fi
+	
+	set -- $args
+	# You cannot use the set command with a backquoted getopt directly,
+	# since the exit code from getopt would be shadowed by those of set,
+	# which is zero by definition.
+	for i
+	do
+		case "$i"
+		in
+			-a)
+				CHECK_ALL_DRIVES=0 # true
+				#echo flag $i set; sflags="${i#-}$sflags";
+				shift;;
+			-s)
+				JUST_CHECK_SMART_STATUS=0 # true
+				shift;;
+			-v)
+				#echo varg is "'"$2"'"; varg="$2";
+				CHECK_SPECIFIC_DRIVE=0 # true
+				SPECIFIC_DRIVE_TO_CHECK="$2"; shift;
+				shift;;
+			-d)
+				DONT_SHOW="$2"; shift;
+				case "$DONT_SHOW"
+				in
+					afsc)
+						DONT_SHOW_AFSC="-v ignore_compression_errors=1"
+						;;
+					sound)
+						DONT_SHOW_SOUND="-v ignore_sound_errors=1"
+						;;
+					graphics)
+						DONT_SHOW_GRAPHICS="-v ignore_graphics_errors=1"
+						;;
+					tm)
+						DONT_SHOW_TM="-v ignore_time_machine_errors=1"
+						;;
+					usb)
+						DONT_SHOW_USB="-v ignore_usb_errors=1"
+						;;
+					mm)
+						DONT_SHOW_MM="-v ignore_multimedia_errors=1"
+						;;
+					b2m)
+						DONT_SHOW_B2M="-v ignore_back_to_my_mac_errors=1"
+						;;
+					font)
+						DONT_SHOW_FONT="-v ignore_font_errors=1"
+						;;
+					full)
+						DONT_SHOW_HD_FULL="-v ignore_drive_full_errors=1"
+						;;
+					swap)
+						DONT_SHOW_SWAP_FULL="-v ignore_swap_full_errors=1"
+						;;
+					unplug)
+						DONT_SHOW_UNPLUG="-v ignore_unplug_errors=1"
+						;;
+					2nd)
+						DONT_SHOW_SECONDARY_IO="-v ignore_secondary_io_errors=1"
+						;;
+				esac
+				shift;;
+			-l)
+				SHOW_LOGS_WHEN_DONE=0 # true
+				shift;;
+			-i)
+				IGNORE_SMART_ERRORS=0 # true
+				shift;;
+			-h)
+				echo 'Usage: diag [-h] [-l] [-a] [-i] [-s] [-v <volume mount point>]'
+				echo '    By default, run SMART tests on all attached drives.  If SMART tests are'
+				echo '    not available, run software tests on all mounted volumes.  Otherwise,'
+				echo '    run software tests on all mounted volumes other than the boot volume.'
+				echo '    The following options modify the default behavior as specified:'
+				echo ''
+				echo '    -h'
+				echo '        show this information.'
+				echo '    -l'
+				echo '        show relevant errors in log files when done testing'
+				echo '    -a'
+				echo '        run software tests on all mounted volumes, including the boot volume'
+				echo '    -i'
+				echo '        ignore SMART errors when determining whether to check logs'
+				echo '    -s'
+				echo '        run only SMART tests and then quit'
+				echo '    -v <volume mount point>'
+				echo '        run software tests on only this mount point'
+				
+				if [ $RUN_DIAG_COMMAND_AT_END -eq 0 ]
+				then
+					echo ''
+					echo 'NB: This script can be sourced into a bash environment to add additional'
+					echo '    functions for manual use.'
+				fi
+				return;;
+			--)
+				shift; break;;
+		esac
+	done
+	
+
+
+	FOUND_HARD_DRIVE_ERRORS=0
+	
+	if [ "`which smartctl`" ]
+	then
+		echo ""
+		echo ""
+		echo "##########################################################################"
+		echo "####################### Checking SMART Status of Drives ##################"
+		echo "##########################################################################"
+		echo ""
+		echo ""
+
+		run_all_SMART_tests
+		if [ $JUST_CHECK_SMART_STATUS -eq 0 ]
+		then
+			return
+		fi
+	else
+		if [ $JUST_CHECK_SMART_STATUS -eq 0 ]
+		then
+			echo "smartctl:  command not found\nInstall smartmontools."
+			return
+		fi
+
+		# assume we should test the boot drive
+		run_software_checks_on_boot_volume
+	fi
+	
+	
+
+
+	if [ $FOUND_HARD_DRIVE_ERRORS == 0 -o $IGNORE_SMART_ERRORS == 0 ]
+	then
+		echo ""
+		echo ""
+		echo "##########################################################################"
+		echo "####################### Checking Contents of Logs ########################"
+		echo "##########################################################################"
+		echo ""
+		echo ""
+
+
+		if [ $CHECK_ALL_DRIVES -eq 0 ]
+		then
+			echo "Checking logs on all volumes, including the boot volume..."
+			for VOLUME in /Volumes/*
+			do
+				if [ -d "$VOLUME" -o -L "$VOLUME" ]
+				then
+					echo "-- Volume:  $VOLUME"
+					do_check_logs "$VOLUME"
+					echo "    -- logs checked"
+	
+					if [ $LOGNAME ]
+					then
+						if [ $LOGNAME = "root" ]
+						then
+							do_check_preferences "$VOLUME"
+							echo "    -- preferences checked"
+							do_check_offline_cache "$VOLUME"
+							echo "    -- eMail caches checked"
+						else
+							echo "Some software checks can't be run as a non-root user."
+						fi
+					else
+						# we're in single-user mode.  Assume whatever shows up can be tested.
+						do_check_preferences "$VOLUME"
+						do_check_offline_cache "$VOLUME"
+					fi
+				fi
+			done
+			
+			if [ $SHOW_LOGS_WHEN_DONE -eq 0 ]
+			then
+				echo ""
+				echo ""
+				echo "##########################################################################"
+				echo "####################### Showing Contents of Logs #########################"
+				echo "##########################################################################"
+				echo ""
+				echo ""
+
+				for VOLUME in /Volumes/*
+				do
+					if [ -d "$VOLUME" -o -L "$VOLUME" ]
+					then
+						do_show_errors "$VOLUME"
+					fi
+				done
+			fi
+		else
+			# echo "We're not checking all drives"
+			
+			if [ $CHECK_SPECIFIC_DRIVE -eq 0 ]
+			then
+				echo "Checking only the volume \"$SPECIFIC_DRIVE_TO_CHECK\" ..."
+				do_check_logs "$SPECIFIC_DRIVE_TO_CHECK"
+				echo "    -- logs checked"
+
+				if [ $LOGNAME ]
+				then
+
+					if [ $LOGNAME = "root" ]
+					then
+						do_check_preferences "$SPECIFIC_DRIVE_TO_CHECK"
+						echo "    -- preferences checked"
+						do_check_offline_cache "$SPECIFIC_DRIVE_TO_CHECK"
+						echo "    -- eMail caches checked"
+					else
+						echo "Some software checks can't be run as a non-root user."
+					fi
+				else
+					# we're in single-user mode.  Assume whatever shows up can be tested.
+					do_check_preferences "$SPECIFIC_DRIVE_TO_CHECK"
+					echo "    -- preferences checked"
+					do_check_offline_cache "$SPECIFIC_DRIVE_TO_CHECK"
+					echo "    -- eMail caches checked"
+				fi
+				
+				if [ $SHOW_LOGS_WHEN_DONE -eq 0 ]
+				then
+					echo ""
+					echo ""
+					echo "##########################################################################"
+					echo "####################### Showing Contents of Logs #########################"
+					echo "##########################################################################"
+					echo ""
+					echo ""
+
+					do_show_errors "$SPECIFIC_DRIVE_TO_CHECK"
+				fi
+
+			else
+				echo "Checking logs on volumes other than the boot volume..."
+				run_software_checks
+				
+				if [ $SHOW_LOGS_WHEN_DONE -eq 0 ]
+				then
+					echo ""
+					echo ""
+					echo "##########################################################################"
+					echo "####################### Showing Contents of Logs #########################"
+					echo "##########################################################################"
+					echo ""
+					echo ""
+
+					show_errors
+				fi
+			fi
+		fi
+	else
+		echo "Software checks not run due to SMART status failures.  Run \"run_software_checks\" or \"diag -i\" to check anyway."
+	fi
+}
+
+if [ $RUN_DIAG_COMMAND_AT_END -eq 0 ]
+then
+	# We've determined at the start that this script is not being sourced.
+	diag $@
+else
+	# The script is being sourced, so give a tiny little bit of info on
+	# how to get started.
+	
+	if [ $LOGNAME ]
+	then
+		if [ $LOGNAME != "root" ]
+		then
+			echo "Run \"sudo -i\" then \"diag\" to run SMART tests, check logs, check plist files, and check for email offline cache files."
+		else
+			echo "Run \"diag\" to run SMART tests, check logs, check plist files, and check for email offline cache files."
+		fi
+	else
+		echo "Run \"diag\" to run SMART tests.  Defaults tests are limited in single-user mode.  Run \"diag -h\" for more options."
+	fi
+fi
