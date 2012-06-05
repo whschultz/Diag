@@ -212,6 +212,11 @@ BEGIN {
 	next;
 }
 
+/\/dev\/rdisk.*Volume check failed/ {
+	handle_error_row($0,"Corrupt File system",RED);
+	next;
+}
+
 BEGIN {
 	# Not an official list.  Tweaking this as I come across the errors.  Descriptions are determined
 	# by author from context clues in the logs.
