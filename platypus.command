@@ -1,6 +1,8 @@
 #!/bin/sh
 
-export LOCATION="`dirname $0`"
+export LAUNCHED="$0"
+
+export LOCATION="$(dirname "$LAUNCHED")"
 
 #export PATH="$LOCATION:$PATH"
 
