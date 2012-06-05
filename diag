@@ -810,41 +810,41 @@ do_check_users () {
 	YELLOW=`tput setaf 3`
 	RESET=`tput sgr0`
 
-	if [ -d "$1"/var/db/netinfo ]
+	if [ -d "$1"/var/db/dslocal ]
 	then
-		if [ "`which nicl`" ]
-		then
-			for USER in `nicl -raw "$1"/var/db/netinfo/local.nidb -list /users/ | awk '// { print $2 }'`
-			do
-				USER_ID=`nicl -raw "$1"/var/db/netinfo/local.nidb -read /users/$USER uid | awk '// { print $2 }'`
-				if [ "$USER_ID" -gt "499" ]
+		for PLIST in "$1"/var/db/dslocal/nodes/Default/users/*.plist
+		do
+			USER=`basename "$PLIST" .plist`
+			USER_ID="`defaults read \"$1\"/var/db/dslocal/nodes/Default/users/$USER uid | sed -E 's/\(([^0-9-]*(([0-9]|-)*).*)\)/\2/g'`"
+			if [ "$USER_ID" -gt "499" ]
+			then
+				USERS_HOME="`defaults read \"$1\"/var/db/dslocal/nodes/Default/users/$USER home | awk '// { split($0,a,\"\\"\"); print a[2]; }'`"
+				if [ ! -d "$USERS_HOME" ]
 				then
-					USERS_HOME="`nicl -raw \"$1\"/var/db/netinfo/local.nidb -read /users/$USER home | awk '// { print $2 }'`"
-					if [ ! -d "$USERS_HOME" ]
-					then
-						echo $RED"Home directory for user $USER on $1 does not exist!  Should be $USERS_HOME"$RESET
-					fi
+					echo $RED"Home directory for user \"$USER\" on \"$1\" does not exist!  Should be \"$USERS_HOME\""$RESET
 				fi
-			done
-		else
-			echo $YELLOW"Can't currently test pre-10.5 users from a system running 10.5 or later.  Volume:  \"$1\""$RESET
-		fi
+			fi
+		done
 	else
-		if [ -d "$1"/var/db/dslocal ]
+		if [ -d "$1"/var/db/netinfo ]
 		then
-			for PLIST in "$1"/var/db/dslocal/nodes/Default/users/*.plist
-			do
-				USER=`basename "$PLIST" .plist`
-				USER_ID="`defaults read \"$1\"/var/db/dslocal/nodes/Default/users/$USER uid | sed -E 's/\(([^0-9-]*(([0-9]|-)*).*)\)/\2/g'`"
-				if [ "$USER_ID" -gt "499" ]
-				then
-					USERS_HOME="`defaults read \"$1\"/var/db/dslocal/nodes/Default/users/$USER home | awk '// { split($0,a,\"\\"\"); print a[2]; }'`"
-					if [ ! -d "$USERS_HOME" ]
+			if [ "`which nicl`" ]
+			then
+				for USER in `nicl -raw "$1"/var/db/netinfo/local.nidb -list /users/ | awk '// { print $2 }'`
+				do
+					USER_ID=`nicl -raw "$1"/var/db/netinfo/local.nidb -read /users/$USER uid | awk '// { print $2 }'`
+					if [ "$USER_ID" -gt "499" ]
 					then
-						echo $RED"Home directory for user \"$USER\" on \"$1\" does not exist!  Should be \"$USERS_HOME\""$RESET
+						USERS_HOME="`nicl -raw \"$1\"/var/db/netinfo/local.nidb -read /users/$USER home | awk '// { print $2 }'`"
+						if [ ! -d "$USERS_HOME" ]
+						then
+							echo $RED"Home directory for user $USER on $1 does not exist!  Should be $USERS_HOME"$RESET
+						fi
 					fi
-				fi
-			done
+				done
+			else
+				echo $YELLOW"Can't currently test pre-10.5 users from a system running 10.5 or later.  Volume:  \"$1\""$RESET
+			fi
 		fi
 	fi
 }
