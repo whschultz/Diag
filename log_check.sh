@@ -217,7 +217,8 @@ END {
 		}
 		
 		print "Worst amount of time between backups:  " worst_days_since_backup " as of " worst_date;
-		print "Last failed backup:  " last_failed_backup;
+		print "Last failed backup:      " last_failed_backup;
+		print "Last successful backup:  " last_successful_backup
 	}
 	print ""
 }
@@ -239,6 +240,14 @@ END {
 	}
 	else
 		handle_ignored_error($0,"Time Machine",YELLOW);
+	next;
+}
+
+/backupd.*Backup completed successfully/ {
+	if ( ignore_time_machine_errors == 0 )
+	{
+		last_successful_backup=$1 " " $2 " " $3;
+	}
 	next;
 }
 
