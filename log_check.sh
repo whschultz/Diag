@@ -176,11 +176,19 @@ BEGIN {
 	next;
 }
 
-/(USBF|IOUSBMassStorageClass|AppleUSBMultitouchDebug|USB Notification).*(timing|is having trouble enumerating|was not able to enumerate|The device is still unresponsive|bit not sticking|data length is 0 in enqueueData|Device.*is violating.*the USB Specification|has caused an overcurrent condition|returning error|reported error|could not find the hub device)/ {
+/(USBF|IOUSBMassStorageClass|USB Notification).*(timing|is having trouble enumerating|was not able to enumerate|The device is still unresponsive|bit not sticking|data length is 0 in enqueueData|Device.*is violating.*the USB Specification|has caused an overcurrent condition|returning error|reported error|could not find the hub device)/ {
 	if ( ignore_usb_errors == 0 )
 		handle_error_row($0,"USB",YELLOW);
 	else
 		handle_ignored_error($0,"USB",YELLOW);
+	next;
+}
+
+/(AppleUSBMultitouchDebug|AppleUSBMultitouchDriver).*(packet checksum is incorrect|returning error|reported error)/ {
+	if ( ignore_usb_errors == 0 )
+		handle_error_row($0,"Trackpad",PURPLE);
+	else
+		handle_ignored_error($0,"Trackpad",PURPLE);
 	next;
 }
 
