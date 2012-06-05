@@ -82,7 +82,7 @@ BEGIN {
 			physically_connected_drives_regexp=(physically_connected_drives_regexp "|" drive );
 	}
 	
-	disk_IO_error_regexp="(" physically_connected_drives_regexp ").*(I\\/O (error|timeout)|media is not present|\\(UNDEFINED\\)|device is not open|alignment error|close: journal .*, is invalid)";
+	disk_IO_error_regexp="(" physically_connected_drives_regexp ")(s[0-9]+)?:.*(I\\/O (error|timeout)|media is not present|\\(UNDEFINED\\)|device is not open|alignment error|close: journal .*, is invalid)";
 	#print "disk IO regexp: " disk_IO_error_regexp
 }
 
