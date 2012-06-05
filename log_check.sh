@@ -464,7 +464,7 @@ END {
 #
 
 
-/((NVDA|NVChannel)(\((Compute|OpenGL|Display)\).*(exception|timeout)|: Fatal error)|ATIRadeon.*Overflowed|GPU Debug Info|kernel.*Graphics chip error|The graphics driver has detected a corruption in its command stream)/ {
+/((NVDA|NVChannel)(\((Compute|OpenGL|Display)\).*(exception|timeout)|: Fatal error|: rmStart failed|, Display.*Not usable)|ATIRadeon.*Overflowed|GPU Debug Info|kernel.*Graphics chip error|The graphics driver has detected a corruption in its command stream)/ {
 	if ( ignore_graphics_errors == 0 )
 		handle_error_row($0,"Graphics",RED);
 	else
