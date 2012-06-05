@@ -289,6 +289,33 @@ END {
 	next;
 }
 
+/SystemStarter.*failed security check/ {
+	split($0,a,":");
+	explanation=a[4]": "a[5];
+	security_failure_reasons[explanation]++;
+	security_failure_count++;
+
+	if ( ignore_security_errors == 0 )
+		handle_error_row($0,"Security",PURPLE);
+	else
+		handle_ignored_error($0,"Security",PURPLE);
+	next;
+}
+END {
+# this END statement gives the summary from the above security failure causes
+	if ( security_failure_count > 0 ) {		
+		print PURPLE"Summary of Security errors encountered:"RESET;
+		for (failure in security_failure_reasons) {
+			print failure;
+		}
+	}
+
+	print ""
+}
+
+
+
+
 # Commented out because this does not seem to be indicative of actual problems
 #/kernel.*(decmpfs|AppleFSCompression).*err/ {
 #	if ( ignore_compression_errors == 0 )
