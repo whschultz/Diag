@@ -708,6 +708,16 @@ END {
 #   Default Behavior for non-matching lines
 #
 
+/----------- Showing errors from.*-----------/ {
+# new log file category, and always print this line
+	if ( print_all_errors != 0 )
+	{
+		print "\n\n"$0"\n\n"
+	}
+	
+	# fall through and count as a default non-matching line.
+}
+
 // {
 # clean line
 	last_multimedia_error++;

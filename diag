@@ -210,42 +210,49 @@ show_all_logs () {
 
 do_show_all_logs () {
 	# show logs in proper order from oldest to newest
-	for NUMBER in 9 8 7 6 5 4 3 2 1 0
-	do
-		if [ -e "$1"/var/log/kernel.log.$NUMBER.bz2 ]
-		then
-			bzcat "$1"/var/log/kernel.log.$NUMBER.bz2
-		fi
-		if [ -e "$1"/var/log/kernel.log.$NUMBER.gz ]
-		then
-			gzcat "$1"/var/log/kernel.log.$NUMBER.gz
-		fi
-	done
 	if [ -e "$1"/var/log/kernel.log ]
 	then
+		echo "----------- Showing errors from $1/var/log/kernel.log* -----------"
+
+		for NUMBER in 9 8 7 6 5 4 3 2 1 0
+		do
+			if [ -e "$1"/var/log/kernel.log.$NUMBER.bz2 ]
+			then
+				bzcat "$1"/var/log/kernel.log.$NUMBER.bz2
+			fi
+			if [ -e "$1"/var/log/kernel.log.$NUMBER.gz ]
+			then
+				gzcat "$1"/var/log/kernel.log.$NUMBER.gz
+			fi
+		done
+
 		cat "$1"/var/log/kernel.log
 	fi
 
 	
-	for NUMBER in 9 8 7 6 5 4 3 2 1 0
-	do
-		if [ -e "$1"/var/log/system.log.$NUMBER.bz2 ]
-		then
-			bzcat "$1"/var/log/system.log.$NUMBER.bz2
-		fi
-		if [ -e "$1"/var/log/system.log.$NUMBER.gz ]
-		then
-			gzcat "$1"/var/log/system.log.$NUMBER.gz
-		fi
-	done
-	
 	if [ -e "$1"/var/log/system.log ]
 	then
+		echo "----------- Showing errors from $1/var/log/system.log* -----------"
+
+		for NUMBER in 9 8 7 6 5 4 3 2 1 0
+		do
+			if [ -e "$1"/var/log/system.log.$NUMBER.bz2 ]
+			then
+				bzcat "$1"/var/log/system.log.$NUMBER.bz2
+			fi
+			if [ -e "$1"/var/log/system.log.$NUMBER.gz ]
+			then
+				gzcat "$1"/var/log/system.log.$NUMBER.gz
+			fi
+		done
+		
 		cat "$1"/var/log/system.log
 	fi
 	
 	if [ -e "$1"/var/log/fsck_hfs.log ]
 	then
+		echo "----------- Showing errors from $1/var/log/fsck_hfs.log -----------"
+
 		cat "$1"/var/log/fsck_hfs.log
 	fi
 }
