@@ -827,6 +827,13 @@ do_check_users () {
 				if [ \( ! -d "$USERS_HOME" \) -a \( ! -d "$1""$USERS_HOME" \) ]
 				then
 					echo $RED"Home directory for user \"$USER\" on \"$1\" does not exist!  Should be \"$USERS_HOME\""$RESET
+				else
+					if [ \( \( ! -d "$USERS_HOME/Documents" \) -a \( ! -d "$1""$USERS_HOME/Documents" \) \) \
+						-o \( \( ! -d "$USERS_HOME/Library" \) -a \( ! -d "$1""$USERS_HOME/Library" \) \) \
+						-o \( \( ! -d "$USERS_HOME/Desktop" \) -a \( ! -d "$1""$USERS_HOME/Desktop" \) \) ]
+					then
+						echo $RED"Home directory for user \"$USER\" on \"$1\" is missing important folders!  Should be \"$USERS_HOME\""$RESET					
+					fi
 				fi
 			fi
 		done
@@ -859,6 +866,13 @@ do_check_users () {
 						if [ \( ! -d "$USERS_HOME" \) -a \( ! -d "$1""$USERS_HOME" \) ]
 						then
 							echo $RED"Home directory for user $USER on $1 does not exist!  Should be $USERS_HOME"$RESET
+						else
+							if [ \( \( ! -d "$USERS_HOME/Documents" \) -a \( ! -d "$1""$USERS_HOME/Documents" \) \) \
+								-o \( \( ! -d "$USERS_HOME/Library" \) -a \( ! -d "$1""$USERS_HOME/Library" \) \) \
+								-o \( \( ! -d "$USERS_HOME/Desktop" \) -a \( ! -d "$1""$USERS_HOME/Desktop" \) \) ]
+							then
+								echo $RED"Home directory for user \"$USER\" on \"$1\" is missing important folders!  Should be \"$USERS_HOME\""$RESET					
+							fi
 						fi
 					fi
 				done
