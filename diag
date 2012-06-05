@@ -178,7 +178,7 @@ do_show_relevant_panic_info () {
 			# grep to highlight potentially relevant obvious causes with enough
 			# context that grep won't ever leave anything out.
 			# At the moment, this has been tested on one log file on 10.7.1
-			if [ `basename $FILE` != "panic.log" ]
+			if [ `basename "$FILE"` != "panic.log" ]
 			then
 				awk '/Interval|\*\*\*\*\*\*\*\*\*|Kernel version/, /loaded kexts|RELEASE_(I386|PPC)/' "$FILE" | egrep --color=always -C 50 '(com|edu|org)(\.[a-zA-Z]*)+|type.*,|cpu [0-9]+|Faulting CPU: 0x[0-9A-Fa-f]+|Darwin Kernel Version [0-9]+(\.[0-9]+)+|System model name: [A-Za-z]+[0-9]+,[0-9]'
 			else
