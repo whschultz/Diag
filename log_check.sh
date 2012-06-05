@@ -645,6 +645,8 @@ BEGIN {
 	list_of_explanations[-82]=RED"(check thermal sensors)"RESET;
 	list_of_explanations[-100]=RED"(power supply temp exceeds limits.  Check fans and air flow)"RESET;
 	list_of_explanations[-101]=RED"(LCD overtemp.  Check LCD panel and environment temperature)"RESET;
+
+	list_of_explanations[-102]=BOLD RED"(abnormal, not found in documentation; suspect bad/overheating magsafe adapter)"RESET;
 	
 	
 	# This overrides anything written above for the following machines.
