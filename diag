@@ -208,9 +208,7 @@ show_all_logs () {
 	done
 }
 
-do_show_all_logs () {
-	# show logs in proper order from oldest to newest
-	
+do_show_kernel_logs() {
 	GREEN=`tput setaf 2`
 	RESET=`tput sgr0`
 
@@ -232,8 +230,12 @@ do_show_all_logs () {
 
 		cat "$1"/var/log/kernel.log
 	fi
+}
 
-	
+do_show_system_logs() {
+	GREEN=`tput setaf 2`
+	RESET=`tput sgr0`
+
 	if [ -e "$1"/var/log/system.log ]
 	then
 		echo $GREEN"----------- Showing errors from $1/var/log/system.log* -----------"$RESET
@@ -252,13 +254,26 @@ do_show_all_logs () {
 		
 		cat "$1"/var/log/system.log
 	fi
-	
+}
+
+do_show_fsck_logs () {
+	GREEN=`tput setaf 2`
+	RESET=`tput sgr0`
+
 	if [ -e "$1"/var/log/fsck_hfs.log ]
 	then
 		echo $GREEN"----------- Showing errors from $1/var/log/fsck_hfs.log -----------"$RESET
 
 		cat "$1"/var/log/fsck_hfs.log
 	fi
+}
+
+do_show_all_logs () {
+	# show logs in proper order from oldest to newest
+	
+	do_show_kernel_logs "$1"
+	do_show_system_logs "$1"
+	do_show_fsck_logs "$1"
 }
 
 
@@ -284,19 +299,28 @@ do_show_time_machine_info () {
 
 	if [ -e "$1"/var/db/.TimeMachine.Results.plist ]
 	then
-		LATEST_COMPLETE_BACKUP="`defaults read \"$1\"/var/db/.TimeMachine.Results BACKUP_COMPLETED_DATE`"
-		OLDEST_COMPLETE_BACKUP="`defaults read \"$1\"/var/db/.TimeMachine.Results kCSBackupdOldestCompleteSnapshotDate`"
-		BYTES_AVAILABLE_ON_BACKUP_DRIVE="`defaults read \"$1\"/var/db/.TimeMachine.Results BytesAvailable`"
-		BYTES_TO_COPY="`defaults read \"$1\"/var/db/.TimeMachine.Results BytesToCopy`"
-		PADDING="`defaults read \"$1\"/var/db/.TimeMachine.Results PaddedBytesRequired`"
-		IS_RUNNING="`defaults read \"$1\"/var/db/.TimeMachine.Results Running`"
-		
-		BYTES_NEEDED_TO_BACKUP="`echo $BYTES_TO_COPY + $PADDING | bc`"
-
-		
-		if [ $BYTES_NEEDED_TO_BACKUP -gt $BYTES_AVAILABLE_ON_BACKUP_DRIVE ]
+		LATEST_COMPLETE_BACKUP="`defaults read \"$1\"/var/db/.TimeMachine.Results BACKUP_COMPLETED_DATE 2> /dev/null`"
+		OLDEST_COMPLETE_BACKUP="`defaults read \"$1\"/var/db/.TimeMachine.Results kCSBackupdOldestCompleteSnapshotDate 2> /dev/null`"
+		BYTES_AVAILABLE_ON_BACKUP_DRIVE="`defaults read \"$1\"/var/db/.TimeMachine.Results BytesAvailable 2> /dev/null`"
+		BYTES_TO_COPY="`defaults read \"$1\"/var/db/.TimeMachine.Results BytesToCopy 2> /dev/null`"
+		if [ "$BYTES_AVAILABLE_ON_BACKUP_DRIVE" -a "$BYTES_TO_COPY" ]
 		then
-			echo $RED"There's not enough free space available on the Time Machine backup drive to complete a backup."$RESET
+			PADDING="`defaults read \"$1\"/var/db/.TimeMachine.Results PaddedBytesRequired 2> /dev/null`"
+			IS_RUNNING="`defaults read \"$1\"/var/db/.TimeMachine.Results Running 2> /dev/null`"
+			BYTES_NEEDED_TO_BACKUP=""
+			
+			if [ "$BYTES_TO_COPY" -a "$PADDING" ]
+			then
+				BYTES_NEEDED_TO_BACKUP="`echo $BYTES_TO_COPY + $PADDING | bc`"
+			fi
+			
+			if [ "$BYTES_NEEDED_TO_BACKUP" -a $BYTES_NEEDED_TO_BACKUP -gt $BYTES_AVAILABLE_ON_BACKUP_DRIVE ]
+			then
+				echo $RED"            There's not enough free space available on the Time Machine backup drive to complete a backup."$RESET
+			else
+				GIGABYTES_AVAILABLE="`echo $BYTES_AVAILABLE_ON_BACKUP_DRIVE / 1073741824 | bc`"
+				echo $GREEN"            There's still "$GIGABYTES_AVAILABLE"GB available on the Time Machine backup drive."$RESET
+			fi
 		fi
 		
 		if [ $IS_RUNNING -ne 1 ]
@@ -304,8 +328,15 @@ do_show_time_machine_info () {
 			echo $RED"Time machine is turned off."$RESET			
 		fi
 		
-		echo "            Latest Backup: $LATEST_COMPLETE_BACKUP"
-		echo "            Oldest Backup: $OLDEST_COMPLETE_BACKUP"
+		if [ "$LATEST_COMPLETE_BACKUP" ]
+		then
+			echo "            Latest Backup: $LATEST_COMPLETE_BACKUP"
+		fi
+		
+		if [ "$OLDEST_COMPLETE_BACKUP" ]
+		then
+			echo "            Oldest Backup: $OLDEST_COMPLETE_BACKUP"
+		fi
 	else
 		echo $RED"            No master record of a Time Machine backup found."$RESET
 	fi
@@ -333,12 +364,17 @@ do_check_logs () {
 			MODEL_IDENTIFIER=0
 		fi
 		
-		if [ "`which log_check.sh`" ]
+		LOG_CHECK="`which log_check.sh`"
+		
+		if [ ! $LOG_CHECK ]
 		then
-			do_show_all_logs "$1" | log_check.sh -v MODEL_IDENTIFIER="$MODEL_IDENTIFIER"
-		else
-			do_show_all_logs "$1" | ./log_check.sh -v MODEL_IDENTIFIER="$MODEL_IDENTIFIER"
+			LOG_CHECK="./log_check.sh"
 		fi
+		
+		do_show_kernel_logs "$1" | $LOG_CHECK -v MODEL_IDENTIFIER="$MODEL_IDENTIFIER"
+		do_show_system_logs "$1" | $LOG_CHECK -v MODEL_IDENTIFIER="$MODEL_IDENTIFIER"
+		do_show_fsck_logs "$1" | $LOG_CHECK -v MODEL_IDENTIFIER="$MODEL_IDENTIFIER"
+			
 #	else
 #		echo "    -- Folder does not exist, so no log files to check:  $1/var/log"
 	fi
@@ -370,13 +406,16 @@ do_show_errors () {
 			MODEL_IDENTIFIER=0
 		fi
 
-		if [ "`which log_check.sh`" ]
+		LOG_CHECK="`which log_check.sh`"
+		
+		if [ ! $LOG_CHECK ]
 		then
-			do_show_all_logs "$1" | log_check.sh -v print_all_errors=1 -v MODEL_IDENTIFIER="$MODEL_IDENTIFIER" $SHOW_SHUTDOWN_CAUSES $DONT_SHOW_SECONDARY_IO $DONT_SHOW_UNPLUG $DONT_SHOW_SWAP_FULL $DONT_SHOW_HD_FULL $DONT_SHOW_FONT $DONT_SHOW_B2M $DONT_SHOW_MM $DONT_SHOW_AFSC $DONT_SHOW_SOUND $DONT_SHOW_GRAPHICS $DONT_SHOW_TM $DONT_SHOW_USB $DONT_SHOW_LAUNCHD
-		else
-			do_show_all_logs "$1" | ./log_check.sh -v print_all_errors=1 -v MODEL_IDENTIFIER="$MODEL_IDENTIFIER" $SHOW_SHUTDOWN_CAUSES $DONT_SHOW_SECONDARY_IO $DONT_SHOW_UNPLUG $DONT_SHOW_SWAP_FULL $DONT_SHOW_HD_FULL $DONT_SHOW_FONT $DONT_SHOW_B2M $DONT_SHOW_MM $DONT_SHOW_AFSC $DONT_SHOW_SOUND $DONT_SHOW_GRAPHICS $DONT_SHOW_TM $DONT_SHOW_USB $DONT_SHOW_LAUNCHD
-
+			LOG_CHECK="./log_check.sh"
 		fi
+
+		do_show_kernel_logs "$1" | $LOG_CHECK -v print_all_errors=1 -v MODEL_IDENTIFIER="$MODEL_IDENTIFIER" $SHOW_SHUTDOWN_CAUSES $DONT_SHOW_SECONDARY_IO $DONT_SHOW_UNPLUG $DONT_SHOW_SWAP_FULL $DONT_SHOW_HD_FULL $DONT_SHOW_FONT $DONT_SHOW_B2M $DONT_SHOW_MM $DONT_SHOW_AFSC $DONT_SHOW_SOUND $DONT_SHOW_GRAPHICS $DONT_SHOW_TM $DONT_SHOW_USB $DONT_SHOW_LAUNCHD
+		do_show_system_logs "$1" | $LOG_CHECK -v print_all_errors=1 -v MODEL_IDENTIFIER="$MODEL_IDENTIFIER" $SHOW_SHUTDOWN_CAUSES $DONT_SHOW_SECONDARY_IO $DONT_SHOW_UNPLUG $DONT_SHOW_SWAP_FULL $DONT_SHOW_HD_FULL $DONT_SHOW_FONT $DONT_SHOW_B2M $DONT_SHOW_MM $DONT_SHOW_AFSC $DONT_SHOW_SOUND $DONT_SHOW_GRAPHICS $DONT_SHOW_TM $DONT_SHOW_USB $DONT_SHOW_LAUNCHD
+		do_show_fsck_logs "$1" | $LOG_CHECK -v print_all_errors=1 -v MODEL_IDENTIFIER="$MODEL_IDENTIFIER" $SHOW_SHUTDOWN_CAUSES $DONT_SHOW_SECONDARY_IO $DONT_SHOW_UNPLUG $DONT_SHOW_SWAP_FULL $DONT_SHOW_HD_FULL $DONT_SHOW_FONT $DONT_SHOW_B2M $DONT_SHOW_MM $DONT_SHOW_AFSC $DONT_SHOW_SOUND $DONT_SHOW_GRAPHICS $DONT_SHOW_TM $DONT_SHOW_USB $DONT_SHOW_LAUNCHD
 
 #	else
 #		echo "    -- Folder does not exist, so no log files to show:  $1/var/log"

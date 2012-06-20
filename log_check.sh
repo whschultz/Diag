@@ -7,6 +7,10 @@
 ############################################################
 
 END {
+	handle_end_of_log_file();
+}
+
+END {
 # the first END clause initiates the beginning of the summaries
 	if ( print_all_errors != 0 )
 		print "\n    ---------------\n";
@@ -39,11 +43,17 @@ BEGIN {
 # Main END statement.  Gives a count of the error types encountered
 END {
 	#print "Done"
-	print "Summary of errors encountered\ncount\t: first date\t\t: last date\t\t: error type";
+	error_type_counts=0;
+	for ( error_type in error_counts )
+		error_type_counts++;
+		
+	if ( error_type_counts > 0 )
+		print "Summary of errors encountered\ncount\t: first date\t\t: last date\t\t: error type";
 	for ( error_type in error_counts )
 		print error_colors[error_type] error_counts[error_type] "\t: " first_error_dates[error_type] "\t: "last_error_dates[error_type] "\t: " error_type RESET;
 #	RESET()
-	print ""
+	if ( error_type_counts > 0 )
+		print ""
 }
 
 ####################################################################
@@ -763,9 +773,16 @@ END {
 #   Default Behavior for non-matching lines
 #
 
+BEGIN {
+	highest_year=0;
+	current_year=0;
+}
+
 /----------- Showing errors from.*-----------/ {
-# new log file category, and always print this line
-	if ( print_all_errors != 0 )
+# new log file category, and always print these lines
+	handle_end_of_log_file();
+
+	#if ( print_all_errors != 0 )
 	{
 		print "\n\n"$0"\n\n"
 	}
@@ -782,8 +799,71 @@ END {
 	next;
 }
 
+BEGIN {
+	months["Jan"]=1;
+	months["Feb"]=2;
+	months["Mar"]=3;
+	months["Apr"]=4;
+	months["May"]=5;
+	months["Jun"]=6;
+	months["Jul"]=7;
+	months["Aug"]=8;
+	months["Sep"]=9;
+	months["Oct"]=10;
+	months["Nov"]=11;
+	months["Dec"]=12;
+}
+
+function handle_year_tracking(line_text) {
+	split(line_text,row_text_entries," ");	
+	month_of_current_entry=row_text_entries[1];
+	
+	#print "Previous month:  "  previous_month " (" months[previous_month] ")\tCurrent Month:  " month_of_current_entry " (" months[month_of_current_entry] ")" ;
+	
+	# This ignores lines that don't have a valid month
+	if ( months[month_of_current_entry] > 0 )
+	{
+		if ( row_text_entries[1] == "Dec" && row_text_entries[2] == "31" && row_text_entries[3] ~ /19:[0-9]+:[0-9]+/ )
+		{
+			# print "Ignoring this hour"
+			# The clock may have been reset, so we'll ignore this hour for year counts.
+		}
+		else
+		{
+			if ( months[previous_month] > months[month_of_current_entry] )
+			{
+				# print "INSERTING NEW YEAR HERE!!!";
+				current_year++;
+			}
+	
+			previous_month = month_of_current_entry;
+		}
+	}
+}
+
+function handle_end_of_log_file() {
+	highest_year=current_year;
+	current_year=0;
+
+	if ( previous_month != 0 )
+	{
+		if ( print_all_errors != 0 )
+		{
+			print "\n --\n\nEstimated number of years in log file:  " highest_year;
+		}
+		else
+		{
+			print "Estimated number of years in log file:  " highest_year;
+		}
+	}
+	
+	previous_month = 0;
+}
+
 function handle_normal_line(line_text) {
 	lines_since_error++;
+
+	handle_year_tracking(line_text);
 
 	for (var=spacing-1;var>=0;var--)
 	{
@@ -792,14 +872,14 @@ function handle_normal_line(line_text) {
 			clean_line[var+1]=clean_line[var];
 		}
 	}
-	clean_line[0]=$0;
+	clean_line[0]="yr" current_year " " $0;
 	#error_counts["Clean"]++;
 	
 	if ( print_all_errors != 0 )
 	{
 		if (lines_since_error<spacing)
 		{
-			print $0
+			print "yr" current_year " " $0
 		}
 		if (lines_since_error==spacing && spacing > 0)
 		{
@@ -824,25 +904,27 @@ function handle_error_counts(row_text,error_type,color) {
 	error_counts[error_type]++;
 	error_colors[error_type]=color;
 	
+	handle_year_tracking(row_text);
+
 	split(row_text,row_text_entries," ");
 	if ( row_text_entries[2] < 10 )
 	{
-		last_error_dates[error_type]=row_text_entries[1] "  " row_text_entries[2] " " row_text_entries[3];
+		last_error_dates[error_type]=row_text_entries[1] "  " row_text_entries[2] " " row_text_entries[3] " yr " current_year;
 	}
 	else
 	{
-		last_error_dates[error_type]=row_text_entries[1] " " row_text_entries[2] " " row_text_entries[3];	
+		last_error_dates[error_type]=row_text_entries[1] " " row_text_entries[2] " " row_text_entries[3] " yr " current_year;	
 	}
 	
 	if ( first_error_dates[error_type] == 0 )
 	{
 		if ( row_text_entries[2] < 10 )
 		{
-			first_error_dates[error_type]=row_text_entries[1] "  " row_text_entries[2] " " row_text_entries[3];
+			first_error_dates[error_type]=row_text_entries[1] "  " row_text_entries[2] " " row_text_entries[3] " yr " current_year;
 		}
 		else
 		{
-			first_error_dates[error_type]=row_text_entries[1] " " row_text_entries[2] " " row_text_entries[3];	
+			first_error_dates[error_type]=row_text_entries[1] " " row_text_entries[2] " " row_text_entries[3] " yr " current_year;	
 		}	
 	}
 }
@@ -870,11 +952,11 @@ function handle_additional_error_row( row_text,error_type,color ) {
 
 		if ( color != 0 )
 		{
-			print color row_text RESET;
+			print color "yr" current_year " " row_text RESET;
 		}
 		else
 		{
-			print row_text;
+			print "yr" current_year " " row_text;
 		}
 	}
 }
