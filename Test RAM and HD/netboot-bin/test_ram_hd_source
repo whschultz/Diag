@@ -256,10 +256,15 @@ awk '/memtester/ {\
 	current_test=$3;\
 }\
 /Loop [0-9]+\/[0-9]+/ {\
-	current_test=$2;\
+	split($2,a,"/");\
+	current_test=a[1]-1 "/" a[2];\
 }\
 /All tests passed/ {\
 	current_test=current_test+1;\
+}\
+/Done\./ {\
+	split(current_test,a,"/");\
+	current_test=a[1]+1 "/" a[2];\
 }\
 /(Mon|Tue|Wed|Thu|Fri|Sat|Sun).*/ {\
 	failed=0;\
@@ -279,9 +284,9 @@ function handle_end_of_test(date) {\
 	else\
 	{\
 		if ( is_running_memtester > 0 ) \
-			print GREEN"This machine passed "current_test" iterations of memtester"RESET;\
+			print GREEN"This machine finished "current_test" iterations of memtester"RESET;\
 		else\
-			print GREEN"This machine passed "current_test-1" iterations of memtest"RESET;\
+			print GREEN"This machine finished "current_test-1" iterations of memtest"RESET;\
 	}\
 }' /var/netboot/Tests/$SERIALNUMBER/memtest.log
 fi
@@ -301,10 +306,15 @@ awk '/memtester/ {\
 	current_test=$3;\
 }\
 /Loop [0-9]+\/[0-9]+/ {\
-	current_test=$2;\
+	split($2,a,"/");\
+	current_test=a[1]-1 "/" a[2];\
 }\
 /All tests passed/ {\
 	current_test=current_test+1;\
+}\
+/Done\./ {\
+	split(current_test,a,"/");\
+	current_test=a[1]+1 "/" a[2];\
 }\
 /(Mon|Tue|Wed|Thu|Fri|Sat|Sun).*/ {\
 	"tput setaf 5" | getline PURPLE;\
@@ -329,9 +339,9 @@ function handle_end_of_test(date) {\
 	else\
 	{\
 		if ( is_running_memtester > 0 ) \
-			print GREEN"This machine passed "current_test" iterations of memtester"RESET;\
+			print GREEN"This machine finished "current_test" iterations of memtester"RESET;\
 		else\
-			print GREEN"This machine passed "current_test-1" iterations of memtest"RESET;\
+			print GREEN"This machine finished "current_test-1" iterations of memtest"RESET;\
 	}\
 	print PURPLE date RESET;\
 }' /var/netboot/Tests/$SERIALNUMBER/memtest.log
