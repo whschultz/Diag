@@ -69,14 +69,7 @@ run_tests () {
 	
 	test_ram
 	
-	echo "" >> /var/netboot/Tests/$SERIALNUMBER/hd_test.log
-	date >> /var/netboot/Tests/$SERIALNUMBER/hd_test.log
-
-	run_all_smart_tests | tee -a /var/netboot/Tests/$SERIALNUMBER/hd_test.log
-	
-	badblocks -m -v -e $HDBADBLOCKLIMIT /dev/rdisk0 1 >& /dev/null # spin up the drive and prep the first block
-	
-	badblocks -m -s -v -e $HDBADBLOCKLIMIT /dev/rdisk0 2>&1 | tee -a /var/netboot/Tests/$SERIALNUMBER/hd_test.log
+	test_hds
 }
 
 test_ram () {
@@ -120,7 +113,38 @@ test_ram () {
 		/Applications/Rember.app/Contents/Resources/memtest all $MEMTESTLIMIT >> /var/netboot/Tests/$SERIALNUMBER/memtest.log 2>&1 &
 		jobs -l | awk '/memtest/ { print $2 }' > /var/netboot/Tests/$SERIALNUMBER/memtest.pid
 	fi
+}
+
+test_hds () {
+	BLUE=`tput setaf 4`
+	PURPLE=`tput setaf 5`
+	RESET=`tput sgr0`
+
+	SMARTCTL=/opt/local/sbin/smartctl
+
+	do
+		if [ -e $disk ]
+		then
+			if [ -z "`hdiutil info | grep $disk`" ]
+			then
+				# Then this isn't a disk image.  We'll try to test it.
+				echo $BLUE"Testing disk:  $disk"$RESET
+				test_hd $disk
+			fi
+		fi
+	done
+}
+
+test_hd () {
+	DISKNAME="`basename $1`"
+	echo "" >> /var/netboot/Tests/$SERIALNUMBER/hd_test_"$DISKNAME".log
+	date >> /var/netboot/Tests/$SERIALNUMBER/hd_test_"$DISKNAME".log
+
+	run_all_smart_tests "$1" | tee -a /var/netboot/Tests/$SERIALNUMBER/hd_test_"$DISKNAME".log
 	
+	badblocks -m -v -e $HDBADBLOCKLIMIT "$1" 1 >& /dev/null # spin up the drive and prep the first block
+	
+	badblocks -m -s -v -e $HDBADBLOCKLIMIT "$1" 2>&1 | tee -a /var/netboot/Tests/$SERIALNUMBER/hd_test_"$DISKNAME".log
 }
 
 #tail -n 1000 -f memtest.log
@@ -400,167 +424,121 @@ run_all_smart_tests () {
 
 	# Turn on SMART support for the first drive.
 	# Show health of first drive, even if it's good.
-	if ( $SMARTCTL -s on -q errorsonly disk0 )
+	if ( $SMARTCTL -s on -q errorsonly "$1" )
 	then
-		$SMARTCTL -H disk0
+		$SMARTCTL -H "$1"
 	else
-		echo "Initial drive does not support SMART.  Note: USB and Firewire do not Support SMART."
+		echo "Drive does not support SMART.  Note: USB and Firewire do not Support SMART."
 	fi
 	
 	FOUND_HARD_DRIVE_ERRORS=0
 	
 	# Show health of remaining drives only if they exist, are supported, and are bad.
-	
-	# And yes, this implementation does mean that if there are more than ten drives/images attached
-	# that only the first ten will be checked.  This could be rewritten/refactored to take
-	# take advantage of the new list_internal_drives function, but the existing method asks the drive
-	# itself whether it supports SMART, whereas using list_internal_drives makes assumptions about
-	# which drives will support SMART.
-	for disk in /dev/disk[0-9]
-	do
-		if [ -e $disk ]
-		then
-			# Try to turn on SMART, and check the tables if it's supported
-			if ( $SMARTCTL -s on -q errorsonly $disk )
-			then
-				if [ $disk != /dev/disk0 ]
-				then
-					$SMARTCTL -H -q errorsonly $disk
-				fi
-				
-				#true
-				#CONTINUE_TESTING=0
-				
-				# HDD-specific tests
-				
-				CURRENTPENDINGSECTORS=`$SMARTCTL -A \$disk | awk '/Current_Pending_Sector/ { print $10 }'`
-				
-				# if this attribute exists
-				if [ -n "$CURRENTPENDINGSECTORS" ] 
-				then 
-					# and there are errors
-					if [ $CURRENTPENDINGSECTORS -gt 0 ]
-					then
-						echo $RED"Error:  $disk has current pending sectors: "  $CURRENTPENDINGSECTORS $RESET
-						FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
-						#CONTINUE_TESTING=1 #false
-					fi 
-				fi
-				
-				#if [ $CONTINUE_TESTING -eq 0 -o $IGNORE_SMART_ERRORS -eq 0 ]
-				#then
-					# else move on to the next attribute
-					OFFLINEUNC=`$SMARTCTL -A \$disk | awk '/Offline_Uncorrectable/ { print $10 }'`
-					
-					# if this attribute exists
-					if [ -n "$OFFLINEUNC" ] 
-					then 
-						# and there are errors
-						if [ $OFFLINEUNC -gt 0 ]
-						then
-							echo $RED"Error:  $disk has offline uncorrectable sectors: " $OFFLINEUNC $RESET
-							FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
-							CONTINUE_TESTING=1 #false
-						fi
-					fi
-				#fi
-				
-				#if [ $CONTINUE_TESTING -eq 0 -o $IGNORE_SMART_ERRORS -eq 0 ]
-				#then
-					# else move on to the next attribute
-					REALLOC=`$SMARTCTL -A \$disk | awk '/Reallocated_Sector_Ct/ { print $10 }'`
-					if [ -n "$REALLOC" ] 
-					then
-						if [ $REALLOC -gt 0 ]
-						then
-							echo $PURPLE"Warning:  $disk has reallocated sectors: " $REALLOC $RESET
-							FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
-							CONTINUE_TESTING=1 #false
-						fi 
-					fi
-				#fi
-
-				#if [ $CONTINUE_TESTING -eq 0 -o $IGNORE_SMART_ERRORS -eq 0 ]
-				#then
-					# else move on to the next attribute
-					REALLOC_EV=`$SMARTCTL -A \$disk | awk '/Reallocated_Event_Count/ { print $10 }'`
-					if [ -n "$REALLOC_EV" ] 
-					then
-						if [ $REALLOC_EV -gt 0 ]
-						then
-							echo $PURPLE"Warning:  $disk has reallocated events: " $REALLOC_EV $RESET
-							FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
-							CONTINUE_TESTING=1 #false
-						fi 
-					fi
-				#fi
-
-				# SSD-specific tests
-				# This looks like a decent resource:  http://crystalmark.info/software/CrystalDiskInfo/manual-en/HealthStatus.html
-				# More info will be needed on how to treat these as failures.
-				#if [ $CONTINUE_TESTING -eq 0 -o $IGNORE_SMART_ERRORS -eq 0 ]
-				#then
-					# else move on to the next attribute
-					BAD_CLUSTER=`$SMARTCTL -A \$disk | awk '/Bad_Cluster_Table_Count/ { print $10 }'`
-					if [ -n "$BAD_CLUSTER" ] 
-					then
-						if [ $BAD_CLUSTER -gt 0 ]
-						then
-							echo $PURPLE"Warning:  $disk has bad cluster tables: " $BAD_CLUSTER $RESET
-							FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
-							CONTINUE_TESTING=1 #false
-						fi 
-					fi
-				#fi
-
-				#if [ $CONTINUE_TESTING -eq 0 -o $IGNORE_SMART_ERRORS -eq 0 ]
-				#then
-					# else move on to the next attribute
-					ERASE_COUNT_VALUE=`$SMARTCTL -A \$disk | awk '/Erase_Count/ { print $4 }'`
-					ERASE_COUNT_THRESH=`$SMARTCTL -A \$disk | awk '/Erase_Count/ { print $6 }'`
-					ERASE_COUNT_RAW=`$SMARTCTL -A \$disk | awk '/Erase_Count/ { print $10 }'`
-					if [ -n "$ERASE_COUNT_RAW" ] 
-					then
-						# This calculation is a wild guess.  On the one drive I've tested so far,
-						# awk column $10 gives what appears may be percentage consumed (1%), whereas
-						# the threshhold was at 100, and the value was at 199.  It's not clear yet
-						# which numbers mean what.  The tester drive is JMicron family.
-						ERASE_PERCENT=`echo 100 - $ERASE_COUNT_RAW | bc`
-						if [ $ERASE_PERCENT -gt 50 ]
-						then
-							echo $YELLOW"SSD $disk appears to be at $ERASE_PERCENT% life." $RESET
-						else
-							echo $PURPLE"Warning:  $disk appears to be at $ERASE_PERCENT% life" $RESET
-							FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
-							CONTINUE_TESTING=1 #false
-						fi 
-					fi
-				#fi
-				
-				# Generic log testing
-				#if [ $CONTINUE_TESTING -eq 0 -o $IGNORE_SMART_ERRORS -eq 0 ]
-				#then
-					$SMARTCTL -l error $disk > /dev/null
-					
-					# do a binary AND against the seventh bit in the return value of the 
-					# last command--per smartctl man page
-					SMARTSTAT=$(($? & 64))
 		
-					if [ $SMARTSTAT -gt 0 ]
-					then
-						POWER_ON_HOURS=`$SMARTCTL -A \$disk | awk '/Power_On_Hours/ { print $10 }'`
-						DAYS=`echo $POWER_ON_HOURS / 24 | bc`
-						HOURS=`echo "$POWER_ON_HOURS - 24 * $DAYS" | bc`
-						echo $YELLOW"Warning:  Found errors in SMART log for $disk at the following times:" $RESET
-						echo "    Current power on hours: $POWER_ON_HOURS ($DAYS days + $HOURS hours)"
-						$SMARTCTL -l error $disk | awk '/occurred at disk power-on lifetime/ { print "        " $0 }'
-						FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
-						CONTINUE_TESTING=1 #false
-					fi
-				#fi
-			fi
+	# HDD-specific tests
+	
+	CURRENTPENDINGSECTORS=`$SMARTCTL -A \$1 | awk '/Current_Pending_Sector/ { print $10 }'`
+	
+	# if this attribute exists
+	if [ -n "$CURRENTPENDINGSECTORS" ] 
+	then 
+		# and there are errors
+		if [ $CURRENTPENDINGSECTORS -gt 0 ]
+		then
+			echo $RED"Error:  $1 has current pending sectors: "  $CURRENTPENDINGSECTORS $RESET
+			FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
+			#CONTINUE_TESTING=1 #false
+		fi 
+	fi
+	
+	OFFLINEUNC=`$SMARTCTL -A \$1 | awk '/Offline_Uncorrectable/ { print $10 }'`
+	
+	# if this attribute exists
+	if [ -n "$OFFLINEUNC" ] 
+	then 
+		# and there are errors
+		if [ $OFFLINEUNC -gt 0 ]
+		then
+			echo $RED"Error:  $1 has offline uncorrectable sectors: " $OFFLINEUNC $RESET
+			FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
+			CONTINUE_TESTING=1 #false
 		fi
-	done
+	fi
+	
+	REALLOC=`$SMARTCTL -A \$1 | awk '/Reallocated_Sector_Ct/ { print $10 }'`
+	if [ -n "$REALLOC" ] 
+	then
+		if [ $REALLOC -gt 0 ]
+		then
+			echo $PURPLE"Warning:  $1 has reallocated sectors: " $REALLOC $RESET
+			FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
+			CONTINUE_TESTING=1 #false
+		fi 
+	fi
+
+	REALLOC_EV=`$SMARTCTL -A \$1 | awk '/Reallocated_Event_Count/ { print $10 }'`
+	if [ -n "$REALLOC_EV" ] 
+	then
+		if [ $REALLOC_EV -gt 0 ]
+		then
+			echo $PURPLE"Warning:  $1 has reallocated events: " $REALLOC_EV $RESET
+			FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
+			CONTINUE_TESTING=1 #false
+		fi 
+	fi
+
+	# SSD-specific tests
+	# This looks like a decent resource:  http://crystalmark.info/software/CrystalDiskInfo/manual-en/HealthStatus.html
+	# More info will be needed on how to treat these as failures.
+	BAD_CLUSTER=`$SMARTCTL -A \$1 | awk '/Bad_Cluster_Table_Count/ { print $10 }'`
+	if [ -n "$BAD_CLUSTER" ] 
+	then
+		if [ $BAD_CLUSTER -gt 0 ]
+		then
+			echo $PURPLE"Warning:  $1 has bad cluster tables: " $BAD_CLUSTER $RESET
+			FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
+			CONTINUE_TESTING=1 #false
+		fi 
+	fi
+
+	ERASE_COUNT_VALUE=`$SMARTCTL -A \$1 | awk '/Erase_Count/ { print $4 }'`
+	ERASE_COUNT_THRESH=`$SMARTCTL -A \$1 | awk '/Erase_Count/ { print $6 }'`
+	ERASE_COUNT_RAW=`$SMARTCTL -A \$1 | awk '/Erase_Count/ { print $10 }'`
+	if [ -n "$ERASE_COUNT_RAW" ] 
+	then
+		# This calculation is a wild guess.  On the one drive I've tested so far,
+		# awk column $10 gives what appears may be percentage consumed (1%), whereas
+		# the threshhold was at 100, and the value was at 199.  It's not clear yet
+		# which numbers mean what.  The tester drive is JMicron family.
+		ERASE_PERCENT=`echo 100 - $ERASE_COUNT_RAW | bc`
+		if [ $ERASE_PERCENT -gt 50 ]
+		then
+			echo $YELLOW"SSD $1 appears to be at $ERASE_PERCENT% life." $RESET
+		else
+			echo $PURPLE"Warning:  $1 appears to be at $ERASE_PERCENT% life" $RESET
+			FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
+			CONTINUE_TESTING=1 #false
+		fi 
+	fi
+	
+	# Generic log testing
+	$SMARTCTL -l error $1 > /dev/null
+	
+	# do a binary AND against the seventh bit in the return value of the 
+	# last command--per smartctl man page
+	SMARTSTAT=$(($? & 64))
+
+	if [ $SMARTSTAT -gt 0 ]
+	then
+		POWER_ON_HOURS=`$SMARTCTL -A \$1 | awk '/Power_On_Hours/ { print $10 }'`
+		DAYS=`echo $POWER_ON_HOURS / 24 | bc`
+		HOURS=`echo "$POWER_ON_HOURS - 24 * $DAYS" | bc`
+		echo $YELLOW"Warning:  Found errors in SMART log for $1 at the following times:" $RESET
+		echo "    Current power on hours: $POWER_ON_HOURS ($DAYS days + $HOURS hours)"
+		$SMARTCTL -l error $1 | awk '/occurred at disk power-on lifetime/ { print "        " $0 }'
+		FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
+		CONTINUE_TESTING=1 #false
+	fi
 }
 
 
