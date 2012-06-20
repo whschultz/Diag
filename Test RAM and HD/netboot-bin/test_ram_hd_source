@@ -153,70 +153,93 @@ test_hd () {
 #BADBLOCKS="`awk '/Found bad block/ { total=total+1; } END { print total; }' hd_test.log`"
 
 show_hd_test_summary () {
-if [ -e /var/netboot/Tests/$SERIALNUMBER/hd_test.log ]
-then
-awk '/Found bad block/ { total=total+1; } \
-/[0-9]+ ms:.*[0-9]+/ {\
-	"tput setaf 1" | getline RED;\
-	"tput setaf 3" | getline YELLOW;\
-	"tput setaf 2" | getline GREEN;\
-	"tput sgr0" | getline RESET;\
-	if ( $2 < 100 ) \
-		print GREEN $0 RESET;\
-	else if ( $2 < 750 )\
-	{\
-		print YELLOW $0 RESET;\
-		slow_ish=slow_ish+$4;\
+	BLUE=`tput setaf 4`
+	PURPLE=`tput setaf 5`
+	RESET=`tput sgr0`
+
+for FILE in /var/netboot/Tests/$SERIALNUMBER/hd_test*.log
+do
+	echo $BLUE"Showing summary for $FILE"$RESET
+	awk '/Found bad block/ { total=total+1; } \
+	/[0-9]+ ms:.*[0-9]+/ {\
+		"tput setaf 1" | getline RED;\
+		"tput setaf 3" | getline YELLOW;\
+		"tput setaf 2" | getline GREEN;\
+		"tput sgr0" | getline RESET;\
+		if ( $2 < 100 ) \
+			print GREEN $0 RESET;\
+		else if ( $2 < 750 )\
+		{\
+			print YELLOW $0 RESET;\
+			slow_ish=slow_ish+$4;\
+		}\
+		else {\
+			print RED $0 RESET;\
+			slow=slow+$4;\
+		}\
 	}\
-	else {\
-		print RED $0 RESET;\
-		slow=slow+$4;\
+	/.*% done/ { \
+		size=split($0,a,"\b");\
+		for( b=1;b<=size;b++ )\
+		{\
+			if ( a[b] )\
+			{\
+				split(a[b],c," ");\
+				if ( c[1] == "Checking" )\
+					highest_percentage="0.0%";\
+				else if ( c[1] == "done" )\
+					highest_percentage="100.0%";\
+				else\
+					highest_percentage=c[1];\
+			}\
+		}\
 	}\
-}\
-/bad:.*[0-9]+/ {\
-	"tput setaf 1" | getline RED;\
-	"tput sgr0" | getline RESET;\
-	total=$2;\
-	if ( $2 > 0 ) \
-		print RED $0 RESET;\
-	else\
-		print GREEN $0 RESET;\
-}\
-/(Mon|Tue|Wed|Thu|Fri|Sat|Sun).*/ {\
-	"tput setaf 5" | getline PURPLE;\
-	"tput sgr0" | getline RESET;\
-	if ( date_count > 0 ) {\
-		handle_end_of_test( $0 );}\
-	else {\
-		print PURPLE $0 RESET; }\
-	date_count=date_count+1;\
-	total=0;\
-	slow=0;\
-}\
-/((Error:|Warning|SSD).*\/dev\/)|SMART|Current power on hours|occurred at disk power-on lifetime/ { print $0 }\
-BEGIN {\
-	date_count=0;\
-}\
-END {\
-	handle_end_of_test( "" );\
-}\
-function handle_end_of_test(date) {\
-	"tput setaf 5" | getline PURPLE;\
-	"tput setaf 1" | getline RED;\
-	"tput setaf 2" | getline GREEN;\
-	"tput sgr0" | getline RESET;\
-	if ( total > 0 ) {\
-		print RED"Hard drive is bad.  Found " total " bad blocks before stopping."RESET;\
-	} else {\
-		print "Hard drive has no bad blocks.";\
-	if ( slow > 0 )\
-		print RED"Hard drive has slow blocks and may not be trustworthy"RESET;\
-	if ( slow_ish > 99 )\
-		print YELLOW"Hard drive has a fair number of somewhat slow blocks and may not be trustworthy"RESET;\
+	/bad:.*[0-9]+/ {\
+		"tput setaf 1" | getline RED;\
+		"tput sgr0" | getline RESET;\
+		total=$2;\
+		if ( $2 > 0 ) \
+			print RED $0 RESET;\
+		else\
+			print GREEN $0 RESET;\
 	}\
-	print PURPLE date RESET;\
-}' /var/netboot/Tests/$SERIALNUMBER/hd_test.log
-fi
+	/(Mon|Tue|Wed|Thu|Fri|Sat|Sun).*/ {\
+		"tput setaf 5" | getline PURPLE;\
+		"tput sgr0" | getline RESET;\
+		if ( date_count > 0 ) {\
+			handle_end_of_test( $0 );}\
+		else {\
+			print PURPLE $0 RESET; }\
+		date_count=date_count+1;\
+		total=0;\
+		slow=0;\
+	}\
+	/((Error:|Warning|SSD).*\/dev\/)|SMART|Current power on hours|occurred at disk power-on lifetime/ { print $0 }\
+	BEGIN {\
+		date_count=0;\
+	}\
+	END {\
+		handle_end_of_test( "" );\
+	}\
+	function handle_end_of_test(date) {\
+		"tput setaf 5" | getline PURPLE;\
+		"tput setaf 1" | getline RED;\
+		"tput setaf 2" | getline GREEN;\
+		"tput sgr0" | getline RESET;\
+		print "Got to " highest_percentage " in this scan.";\
+		if ( total > 0 ) {\
+			print RED"Hard drive is bad.  Found " total " bad blocks before stopping."RESET;\
+		} else {\
+			print "Hard drive has no bad blocks.";\
+		if ( slow > 0 )\
+			print RED"Hard drive has slow blocks and may not be trustworthy"RESET;\
+		if ( slow_ish > 99 )\
+			print YELLOW"Hard drive has a fair number of somewhat slow blocks and may not be trustworthy"RESET;\
+		highest_percentage="0%";\
+		}\
+		print PURPLE date RESET;\
+	}' "$FILE"
+done
 }
 
 show_limited_ram_test_summary () {
