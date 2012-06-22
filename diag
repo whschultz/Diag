@@ -816,9 +816,9 @@ run_all_SMART_tests () {
 								else
 									echo $RED"Warning:  $disk is at $ERASE_PERCENT% life and should be replaced." $RESET
 								fi
+								FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
+								CONTINUE_TESTING=1 #false
 							fi
-							FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
-							CONTINUE_TESTING=1 #false
 						fi
 					else					
 						ERASE_COUNT_VALUE=`smartctl -A \$disk | awk '/Erase_Count/ { print $4 }'`
@@ -833,11 +833,16 @@ run_all_SMART_tests () {
 							ERASE_PERCENT=`echo 100 - $ERASE_COUNT_RAW | bc`
 							if [ $ERASE_PERCENT -gt 50 ]
 							then
-								echo $YELLOW"SSD $disk appears to be at $ERASE_PERCENT% life." $RESET
+								echo $GREEN"SSD $disk appears to be at $ERASE_PERCENT% life." $RESET
 							else
-								echo $PURPLE"Warning:  $disk appears to be at $ERASE_PERCENT% life" $RESET
-								FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
-								CONTINUE_TESTING=1 #false
+								if [ $SSD_LIFE_LEFT -gt 10 ]
+								then
+									echo $YELLOW"SSD $disk appears to be at $ERASE_PERCENT% life." $RESET
+								else
+									echo $PURPLE"Warning:  $disk appears to be at $ERASE_PERCENT% life" $RESET
+									FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
+									CONTINUE_TESTING=1 #false
+								fi
 							fi
 						fi
 					fi
