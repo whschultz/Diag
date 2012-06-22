@@ -535,24 +535,52 @@ run_all_smart_tests () {
 		fi 
 	fi
 
-	ERASE_COUNT_VALUE=`$SMARTCTL -A \$1 | awk '/Erase_Count/ { print $4 }'`
-	ERASE_COUNT_THRESH=`$SMARTCTL -A \$1 | awk '/Erase_Count/ { print $6 }'`
-	ERASE_COUNT_RAW=`$SMARTCTL -A \$1 | awk '/Erase_Count/ { print $10 }'`
-	if [ -n "$ERASE_COUNT_RAW" ] 
+	SSD_LIFE_LEFT=`smartctl -A \$disk | awk '/SSD_Life_Left/ { print $4 }'`
+	if [ -n "$SSD_LIFE_LEFT" ]
 	then
-		# This calculation is a wild guess.  On the one drive I've tested so far,
-		# awk column $10 gives what appears may be percentage consumed (1%), whereas
-		# the threshhold was at 100, and the value was at 199.  It's not clear yet
-		# which numbers mean what.  The tester drive is JMicron family.
-		ERASE_PERCENT=`echo 100 - $ERASE_COUNT_RAW | bc`
-		if [ $ERASE_PERCENT -gt 50 ]
+		if [ $SSD_LIFE_LEFT -gt 50 ]
 		then
-			echo $YELLOW"SSD $1 appears to be at $ERASE_PERCENT% life." $RESET
+			echo $GREEN"SSD $disk is at $SSD_LIFE_LEFT% life." $RESET
 		else
-			echo $PURPLE"Warning:  $1 appears to be at $ERASE_PERCENT% life" $RESET
-			FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
-			CONTINUE_TESTING=1 #false
-		fi 
+			if [ $SSD_LIFE_LEFT -gt 10 ]
+			then
+				echo $YELLOW"Warning:  $disk is at $SSD_LIFE_LEFT% life" $RESET
+			else
+				if [ $SSD_LIFE_LEFT -eq 0 ]
+				then
+					echo $RED"Error:  $disk is at $ERASE_PERCENT% life and is therefore likely read-only." $RESET
+				else
+					echo $RED"Warning:  $disk is at $ERASE_PERCENT% life and should be replaced." $RESET
+				fi
+				FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
+				CONTINUE_TESTING=1 #false
+			fi
+		fi
+	else					
+		ERASE_COUNT_VALUE=`smartctl -A \$disk | awk '/Erase_Count/ { print $4 }'`
+		ERASE_COUNT_THRESH=`smartctl -A \$disk | awk '/Erase_Count/ { print $6 }'`
+		ERASE_COUNT_RAW=`smartctl -A \$disk | awk '/Erase_Count/ { print $10 }'`
+		if [ -n "$ERASE_COUNT_RAW" ] 
+		then
+			# This calculation is a wild guess.  On the one drive I've tested so far,
+			# awk column $10 gives what appears may be percentage consumed (1%), whereas
+			# the threshhold was at 100, and the value was at 199.  It's not clear yet
+			# which numbers mean what.  The tester drive is JMicron family.
+			ERASE_PERCENT=`echo 100 - $ERASE_COUNT_RAW | bc`
+			if [ $ERASE_PERCENT -gt 50 ]
+			then
+				echo $GREEN"SSD $disk appears to be at $ERASE_PERCENT% life." $RESET
+			else
+				if [ $SSD_LIFE_LEFT -gt 10 ]
+				then
+					echo $YELLOW"SSD $disk appears to be at $ERASE_PERCENT% life." $RESET
+				else
+					echo $PURPLE"Warning:  $disk appears to be at $ERASE_PERCENT% life" $RESET
+					FOUND_HARD_DRIVE_ERRORS=`echo $FOUND_HARD_DRIVE_ERRORS + 1 | bc`
+					CONTINUE_TESTING=1 #false
+				fi
+			fi
+		fi
 	fi
 	
 	# Generic log testing
